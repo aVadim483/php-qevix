@@ -2,8 +2,7 @@ language: php
 
 # list any PHP version you want to test against
 php:
-  - "5.6"
-  - "7.1"
-  - "hhvm"
+  - '5.6'
+  - '7.1'
 
 script: phpunit --no-configuration avadim\Qevix\QevixTest test/QevixTest.php

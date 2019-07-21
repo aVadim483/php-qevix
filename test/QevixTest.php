@@ -2,7 +2,7 @@
 
 namespace avadim\Qevix;
 
-include_once '../src/Qevix.php';
+include_once __DIR__ . '/../src/Qevix.php';
 
 use PHPUnit\Framework\TestCase;
 
