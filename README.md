@@ -32,7 +32,7 @@ $qevix = new Qevix();
 // Конфигурация
 
 // 1. Задает список разрешенных тегов
-$qevix->cfgAllowTags(['b', 'i', 'u', 'a', 'img', 'ul', 'li', 'ol', 'br', 'code', 'pre', 'div', 'cut']);
+$qevix->cfgSetTagsAllowed(['b', 'i', 'u', 'a', 'img', 'ul', 'li', 'ol', 'br', 'code', 'pre', 'div', 'cut']);
 
 // 2. Указывает, какие теги считать короткими (<br>, <img>)
 $qevix->cfgSetTagShort(['br','img','cut']);
@@ -57,19 +57,19 @@ $qevix->cfgSetTagAttrAllowed('a', ['title', 'href' => '#link', 'rel' => '#text',
 $qevix->cfgSetTagAttrAllowed('img', ['src' => '#text', 'alt' => '#text', 'title', 'align' => ['right', 'left', 'center'], 'width' => '#int', 'height' => '#int']);
 
 // 9. Добавляет обязательные параметры для тега
-$qevix->cfgSetTagParamsRequired('img', 'src');
-$qevix->cfgSetTagParamsRequired('a', 'href');
+$qevix->cfgSetTagAttrRequired('img', 'src');
+$qevix->cfgSetTagAttrRequired('a', 'href');
 
 // 10. Указывает, какие теги являются контейнерами для других тегов
-$qevix->cfgSetTagChilds('ul', 'li', true, true);
-$qevix->cfgSetTagChilds('ol', 'li', true, true);
+$qevix->cfgSetTagChildren('ul', 'li', true, true);
+$qevix->cfgSetTagChildren('ol', 'li', true, true);
 
 // 11. Указывает, какие теги не должны быть дочерними к другим тегам
 $qevix->cfgSetTagGlobal('cut');
 
 // 12. Устанавливаем атрибуты тегов, которые будут добавляться автоматически
-$qevix->cfgSetTagParamDefault('a', 'rel', 'nofollow', true);
-$qevix->cfgSetTagParamDefault('img', 'alt', '');
+$qevix->cfgSetTagAttrDefault('a', 'rel', 'nofollow', true);
+$qevix->cfgSetTagAttrDefault('img', 'alt', '');
 
 // 13. Указывает теги, в которых нужно отключить типографирование текста
 $qevix->cfgSetTagNoTypography(['code', 'pre']);

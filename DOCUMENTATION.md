@@ -1,18 +1,18 @@
 
 ## Документации по конфигурации
 
-### cfgAllowTags
+### cfgSetTagsAllowed
 
-cfgAllowTags — Задает список разрешенных тегов
+cfgSetTagsAllowed — Задает список разрешенных тегов
 
-`cfgAllowTags($tags);`
+`cfgSetTagsAllowed($tags);`
 
 **Параметры**
 * $tags — (array|string) список разрешенных тегов
 
 **Пример использования**
 ```php
-$qevix->cfgAllowTags(['b', 'i', 'u', 'a', 'img', 'ul', 'li', 'ol', 'br', 'code']);
+$qevix->cfgSetTagsAllowed(['b', 'i', 'u', 'a', 'img', 'ul', 'li', 'ol', 'br', 'code']);
 ```
 
 ### cfgSetTagShort
@@ -113,9 +113,9 @@ cfgSetTagBlockType — Указывает теги после, которых н
 $qevix->cfgSetTagBlockType(['ol','ul','code']);
 ```
 
-### cfgAllowTagParams
+### cfgSetTagAttrAllowed
 
-cfgAllowTagParams — Добавляет разрешенные параметры для тегов. Значение по умолчанию - шаблон #text. Разрешенные шаблоны #text, #bool, #int, #link, #regexp(...).
+cfgSetTagAttrAllowed — Добавляет разрешенные атрибуты для тегов. Значение по умолчанию - шаблон #text. Разрешенные шаблоны #text, #bool, #int, #link, #regexp(...).
 Шаблон с регулярным выражением может выглядеть так: "#regexp(\d+(%|px))"
 Шаблон #link может быть задан строкой или описан массивом с указанием разрешенных доменов: "['#link' => ['youtube.com', 'video.com']]"
 
@@ -132,11 +132,11 @@ $qevix->cfgSetTagAttrAllowed('img', ['src' => '#text', 'alt' => '#text', 'title'
 $qevix->cfgSetTagAttrAllowed('video', ['src' => ['#link' => ['youtube.com', 'video.com']]];
 ```
 
-### cfgSetTagParamsRequired
+### cfgSetTagAttrRequired
 
-cfgSetTagParamsRequired — Добавляет обязательные параметры для тега
+cfgSetTagAttrRequired — Добавляет обязательные параметры для тега
 
-`$qevix->cfgSetTagParamsRequired($tag, $params)`
+`$qevix->cfgSetTagAttrRequired($tag, $params)`
 
 **Параметры**
 * $tag — (string) тег
@@ -144,15 +144,15 @@ cfgSetTagParamsRequired — Добавляет обязательные пара
 
 **Пример использования**
 ```php
-$qevix->cfgSetTagParamsRequired('img', 'src');
-$qevix->cfgSetTagParamsRequired('a', 'href');
+$qevix->cfgSetTagAttrRequired('img', 'src');
+$qevix->cfgSetTagAttrRequired('a', 'href');
 ```
 
-### cfgSetTagChilds
+### cfgSetTagChildren
 
-cfgSetTagChilds — Указывает какие теги являются контейнерами для других тегов
+cfgSetTagChildren — Указывает какие теги являются контейнерами для других тегов
 
-`$qevix->cfgSetTagChilds($tag, $childs, $isParentOnly = false, $isChildOnly = false)`
+`$qevix->cfgSetTagChildren($tag, $childs, $isParentOnly = false, $isChildOnly = false)`
 
 **Параметры**
 * $tag — (string) тег
@@ -162,8 +162,8 @@ cfgSetTagChilds — Указывает какие теги являются ко
 
 **Пример использования**
 ```php
-$qevix->cfgSetTagChilds('ul', 'li', true, true);
-$qevix->cfgSetTagChilds('ol', 'li', true, true);
+$qevix->cfgSetTagChildren('ul', 'li', true, true);
+$qevix->cfgSetTagChildren('ol', 'li', true, true);
 ```
 
 ### cfgSetTagGlobal
@@ -180,11 +180,11 @@ cfgSetTagGlobal — Указывает какие теги не должны б�
 $qevix->cfgSetTagGlobal('cut');
 ```
 
-### cfgSetTagParamDefault
+### cfgSetTagAttrDefault
 
-cfgSetTagParamDefault — Указывает значения по умолчанию для параметров тега
+cfgSetTagAttrDefault — Указывает значения по умолчанию для параметров тега
 
-`$qevix->cfgSetTagParamDefault($tag, $param, $value, $isRewrite = false)`
+`$qevix->cfgSetTagAttrDefault($tag, $param, $value, $isRewrite = false)`
 
 **Параметры**
 * $tag — (string) тег
@@ -194,9 +194,9 @@ cfgSetTagParamDefault — Указывает значения по умолча�
 
 **Пример использования**
 ```php
-$qevix->cfgSetTagParamDefault('a', 'rel', 'nofollow', true);
-$qevix->cfgSetTagParamDefault('a', 'download', null);
-$qevix->cfgSetTagParamDefault('img', 'alt', '');
+$qevix->cfgSetTagAttrDefault('a', 'rel', 'nofollow', true);
+$qevix->cfgSetTagAttrDefault('a', 'download', null);
+$qevix->cfgSetTagAttrDefault('img', 'alt', '');
 ```
 
 ### cfgSetTagBuildCallback
@@ -223,7 +223,7 @@ function tag_code_build($tag, $params, $content)
 
 cfgSetTagEventCallback — Устанавливает на тег callback-функцию для сбора информации. В отличие от callback-функций установленных с помощью cfgSetTagBuildCallback, этот обработчик не вносит изменения в текст, а может быть использован для сбора какой-либо информации об используемых тегах.
 Например, можно посчитать, какое количество изображений в тексте и сформировать массив из их URL для последующего использования в meta-описании станицы.
-Для сбора информации, теги должны быть разрешены в cfgAllowTags.
+Для сбора информации, теги должны быть разрешены в cfgSetTagsAllowed.
 
 `$qevix->cfgSetTagEventCallback($tag, $callback)`
 

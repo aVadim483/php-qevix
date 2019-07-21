@@ -152,7 +152,7 @@ class Qevix
      *
      * @return $this
      */
-    public function cfgSetAllowedTags($tags, $reset = false)
+    public function cfgSetTagsAllowed($tags, $reset = false)
     {
         if ($reset) {
             foreach($this->tagsRules as $tag => $params) {
@@ -162,19 +162,6 @@ class Qevix
         $this->_cfgSetTagsFlag($tags, self::TAG_ALLOWED, true);
 
         return $this;
-    }
-
-    /**
-     * КОНФИГУРАЦИЯ: Задает список разрешенных тегов
-     *
-     * @param array|string $tags тег(и)
-     * @param bool $reset нужно ли сбросить текущий список разрешенных тегов
-     *
-     * @return $this
-     */
-    public function cfgAllowTags($tags, $reset = false)
-    {
-        return $this->cfgSetAllowedTags($tags, $reset);
     }
 
     /**
@@ -299,19 +286,6 @@ class Qevix
     }
 
     /**
-     * КОНФИГУРАЦИЯ: Алиас функции cfgAllowTagAttr($tag, $attrs)
-     *
-     * @param string $tag тег
-     * @param string|array $attrs разрешённые атрибуты
-     *
-     * @return $this
-     */
-    public function cfgAllowTagParams($tag, $attrs)
-    {
-        return $this->cfgSetTagAttrAllowed($tag, $attrs);
-    }
-
-    /**
      * КОНФИГУРАЦИЯ: Добавляет обязательные атрибуты для тега
      *
      * @param string $tag тег
@@ -329,19 +303,6 @@ class Qevix
     }
 
     /**
-     * КОНФИГУРАЦИЯ: Алиас функции cfgAllowTagAttributes($tag, $attrs)
-     *
-     * @param string $tag тег
-     * @param string|array $attrs разрешённые атрибуты
-     *
-     * @return $this
-     */
-    public function cfgSetTagParamsRequired($tag, $attrs)
-    {
-        return $this->cfgSetTagAttrRequired($tag, $attrs);
-    }
-
-    /**
      * КОНФИГУРАЦИЯ: Указывает значения по умолчанию для атрибутов тега
      *
      * @param string $tag тег
@@ -356,21 +317,6 @@ class Qevix
         $this->tagsRules[$tag][self::TAG_PARAM_AUTO_ADD][$attr] = ['value'=>$value, 'rewrite'=>$isRewrite];
 
         return $this;
-    }
-
-    /**
-     * КОНФИГУРАЦИЯ: Указывает значения по умолчанию для атрибутов тега
-     *
-     * @param string $tag тег
-     * @param string $attr атрибут
-     * @param string $value значение
-     * @param boolean $isRewrite перезаписывать значение значением по умолчанию
-     *
-     * @return $this
-     */
-    public function cfgSetTagParamDefault($tag, $attr, $value, $isRewrite = false)
-    {
-        return $this->cfgSetTagAttrDefault($tag, $attr, $value, $isRewrite);
     }
 
     /**
@@ -401,21 +347,6 @@ class Qevix
         }
 
         return $this;
-    }
-
-    /**
-     * КОНФИГУРАЦИЯ: Указывает, какие теги являются контейнерами для других тегов
-     *
-     * @param string $tag тег
-     * @param string|array $childs разрешённые дочерние теги
-     * @param boolean $isParentOnly тег является только контейнером других тегов и не может содержать текст
-     * @param boolean $isChildOnly вложенные теги не могут присутствовать нигде кроме указанного тега
-     *
-     * @return $this
-     */
-    public function cfgSetTagChilds($tag, $childs, $isParentOnly = false, $isChildOnly = false)
-    {
-        return $this->cfgSetTagChildren($tag, $childs, $isParentOnly, $isChildOnly);
     }
 
     /**
@@ -638,6 +569,83 @@ class Qevix
     }
 
     /**
+     * @deprecated
+     *
+     * @param array|string $tags тег(и)
+     * @param bool $reset нужно ли сбросить текущий список разрешенных тегов
+     *
+     * @return $this
+     */
+    public function cfgAllowTags($tags, $reset = false)
+    {
+        return $this->cfgSetTagsAllowed($tags, $reset);
+    }
+
+    /**
+     * @deprecated
+     *
+     * КОНФИГУРАЦИЯ: Алиас функции cfgAllowTagAttr($tag, $attrs)
+     *
+     * @param string $tag тег
+     * @param string|array $attrs разрешённые атрибуты
+     *
+     * @return $this
+     */
+    public function cfgAllowTagParams($tag, $attrs)
+    {
+        return $this->cfgSetTagAttrAllowed($tag, $attrs);
+    }
+
+    /**
+     * @deprecated
+     *
+     * КОНФИГУРАЦИЯ: Алиас функции cfgAllowTagAttributes($tag, $attrs)
+     *
+     * @param string $tag тег
+     * @param string|array $attrs разрешённые атрибуты
+     *
+     * @return $this
+     */
+    public function cfgSetTagParamsRequired($tag, $attrs)
+    {
+        return $this->cfgSetTagAttrRequired($tag, $attrs);
+    }
+
+    /**
+     * @deprecated
+     *
+     * КОНФИГУРАЦИЯ: Указывает значения по умолчанию для атрибутов тега
+     *
+     * @param string $tag тег
+     * @param string $attr атрибут
+     * @param string $value значение
+     * @param boolean $isRewrite перезаписывать значение значением по умолчанию
+     *
+     * @return $this
+     */
+    public function cfgSetTagParamDefault($tag, $attr, $value, $isRewrite = false)
+    {
+        return $this->cfgSetTagAttrDefault($tag, $attr, $value, $isRewrite);
+    }
+
+    /**
+     * @deprecated
+     *
+     * КОНФИГУРАЦИЯ: Указывает, какие теги являются контейнерами для других тегов
+     *
+     * @param string $tag тег
+     * @param string|array $childs разрешённые дочерние теги
+     * @param boolean $isParentOnly тег является только контейнером других тегов и не может содержать текст
+     * @param boolean $isChildOnly вложенные теги не могут присутствовать нигде кроме указанного тега
+     *
+     * @return $this
+     */
+    public function cfgSetTagChilds($tag, $childs, $isParentOnly = false, $isChildOnly = false)
+    {
+        return $this->cfgSetTagChildren($tag, $childs, $isParentOnly, $isChildOnly);
+    }
+
+    /**
      * @return $this
      */
     public function cfgReset()
@@ -697,7 +705,7 @@ class Qevix
             }
             elseif ($section === 'tags') {
                 foreach($data as $tag => $params) {
-                    $this->cfgAllowTags($tag);
+                    $this->cfgSetTagsAllowed($tag);
                     foreach($params as $key => $val) {
                         // значения вида [0 => 'short'] приводим к виду ['short' => true]
                         if (is_int($key) && is_string($val)) {
@@ -776,7 +784,7 @@ class Qevix
                                 $child = $isChildOnly;
                                 $isChildOnly = false;
                             }
-                            $this->cfgSetTagChilds($tag, $child, $noText, $isChildOnly);
+                            $this->cfgSetTagChildren($tag, $child, $noText, $isChildOnly);
                         }
                     }
                     // Указывает, какие теги не должны быть дочерними к другим тегам
@@ -815,7 +823,7 @@ class Qevix
         }
         if (isset($config['allowed_tags'])) {
             // Задает список разрешенных тегов
-            $this->cfgAllowTags($config['allowed_tags'], true);
+            $this->cfgSetTagsAllowed($config['allowed_tags'], true);
         }
         if (isset($config['forbidden_tags'])) {
             // Указывает теги, которые необходимо вырезать вместе с содержимым

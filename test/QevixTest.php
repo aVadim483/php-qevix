@@ -2,6 +2,8 @@
 
 namespace avadim\Qevix;
 
+include_once '../src/Qevix.php';
+
 use PHPUnit\Framework\TestCase;
 
 class QevixTest extends TestCase
@@ -14,7 +16,7 @@ class QevixTest extends TestCase
         $qevix = new Qevix();
 
         // 1. Задает список разрешенных тегов
-        $qevix->cfgAllowTags(['b', 'i', 'u', 'a', 'img', 'ul', 'li', 'ol', 'br', 'code', 'pre', 'div', 'cut', 'video']);
+        $qevix->cfgSetTagsAllowed(['b', 'i', 'u', 'a', 'img', 'ul', 'li', 'ol', 'br', 'code', 'pre', 'div', 'cut', 'video']);
 
         // 2. Указавает, какие теги считать короткими (<br>, <img>)
         $qevix->cfgSetTagShort(['br','img','cut', 'video']);
@@ -35,28 +37,28 @@ class QevixTest extends TestCase
         $qevix->cfgSetTagBlockType(['ol','ul','code','video','div']);
 
         // 8. Добавляет разрешенные параметры для тегов, значение по умолчанию шаблон #text. Разрешенные шаблоны #text, #int, #link, #regexp(...) (Например: "#regexp(\d+(%|px))")
-        $qevix->cfgAllowTagParams('a', ['title', 'href' => '#link', 'rel' => '#text', 'target' => ['_blank']]);
-        $qevix->cfgAllowTagParams('img', ['src' => '#text', 'alt' => '#text', 'title', 'align' => ['right', 'left', 'center'], 'width' => '#int', 'height' => '#int']);
-        $qevix->cfgAllowTagParams('video', ['src' => ['#link' => ['youtube.com','vimeo.com']]]);
-        $qevix->cfgAllowTagParams('div', ['itemscope' => '#bool', 'itemtype' => '#link', 'class' => '#text']);
+        $qevix->cfgSetTagAttrAllowed('a', ['title', 'href' => '#link', 'rel' => '#text', 'target' => ['_blank']]);
+        $qevix->cfgSetTagAttrAllowed('img', ['src' => '#text', 'alt' => '#text', 'title', 'align' => ['right', 'left', 'center'], 'width' => '#int', 'height' => '#int']);
+        $qevix->cfgSetTagAttrAllowed('video', ['src' => ['#link' => ['youtube.com','vimeo.com']]]);
+        $qevix->cfgSetTagAttrAllowed('div', ['itemscope' => '#bool', 'itemtype' => '#link', 'class' => '#text']);
         // 8a. Тег <head> не разрешен, но задать атрибуты мы можем
-        $qevix->cfgAllowTagParams('head', ['class' => '#text']);
+        $qevix->cfgSetTagAttrAllowed('head', ['class' => '#text']);
 
         // 9. Добавляет обязательные параметры для тега
-        $qevix->cfgSetTagParamsRequired('a', 'href');
-        $qevix->cfgSetTagParamsRequired('img', 'src');
-        $qevix->cfgSetTagParamsRequired('video', 'src');
+        $qevix->cfgSetTagAttrRequired('a', 'href');
+        $qevix->cfgSetTagAttrRequired('img', 'src');
+        $qevix->cfgSetTagAttrRequired('video', 'src');
 
         // 10. Указывает, какие теги являются контейнерами для других тегов
-        $qevix->cfgSetTagChilds('ul', 'li', true, true);
-        $qevix->cfgSetTagChilds('ol', 'li', true, true);
+        $qevix->cfgSetTagChildren('ul', 'li', true, true);
+        $qevix->cfgSetTagChildren('ol', 'li', true, true);
 
         // 11. Указывает, какие теги не должны быть дочерними к другим тегам
         $qevix->cfgSetTagGlobal('cut');
 
         // 12. Устанавливаем атрибуты тегов, которые будут добавлятся автоматически
-        $qevix->cfgSetTagParamDefault('a', 'rel', 'nofollow', true);
-        $qevix->cfgSetTagParamDefault('img', 'alt', '');
+        $qevix->cfgSetTagAttrDefault('a', 'rel', 'nofollow', true);
+        $qevix->cfgSetTagAttrDefault('img', 'alt', '');
 
         // 13. Указывает теги, в которых нужно отключить типографирование текста
         $qevix->cfgSetTagNoTypography(['code', 'pre']);
