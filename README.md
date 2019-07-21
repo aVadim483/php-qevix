@@ -1,5 +1,5 @@
 
-## Qevix  [![Build Status](https://travis-ci.org/AlexanderGrom/php-qevix.svg?branch=master)](https://travis-ci.org/AlexanderGrom/php-qevix)
+## Qevix  [![Build Status](https://travis-ci.org/aVadim483/php-qevix.svg?branch=master)](https://travis-ci.org/aVadim483/php-qevix)
 
 **Qevix** — Система типографирования и фильтрации текста с HTML/XHTML разметкой .
 При обработке HTML-текстов, применяя наборы правил, контролирует перечень допустимых тегов и атрибутов, предотвращает возможные XSS-атаки.
@@ -11,6 +11,7 @@ Qevix основывается на идеях и исходном коде [PHP
 
 * Фильтрация текста с HTML/XHTML разметкой на основе заданных правил о разрешённых тегах и атрибутах;
 * Исправление ошибок HTML/XHTML;
+* Типографирование текстов без обработки HTML/XHTML
 * Обработка строк предваренных специальными символами (#tagname, @username, $keyword);
 * Установка на теги callback-функций для изменения или сбора информации;
 * Предотвращение XSS-атак;

@@ -29,17 +29,17 @@ addChRangeClass($table, Qevix::ord('a'), Qevix::ord('z'), Qevix::ALPHA | Qevix::
 addChRangeClass($table, Qevix::ord('A'), Qevix::ord('Z'), Qevix::ALPHA |  Qevix::PRINTABLE | Qevix::TAG_NAME | Qevix::TAG_PARAM_NAME);
 addChRangeClass($table, Qevix::ord('0'), Qevix::ord('9'), Qevix::NUMERIC | Qevix::PRINTABLE | Qevix::TAG_NAME | Qevix::TAG_PARAM_NAME);
 
-addChClass($table, array('-'), Qevix::TAG_PARAM_NAME | Qevix::PRINTABLE);
+addChClass($table, ['-'], Qevix::TAG_PARAM_NAME | Qevix::PRINTABLE);
 
-addChClass($table, array(' ', "\t"), Qevix::SPACE);
-addChClass($table, array("\r", "\n"), Qevix::NL);
-addChClass($table, array('"'), Qevix::TAG_QUOTE | Qevix::TEXT_QUOTE | Qevix::PRINTABLE);
-addChClass($table, array("'"), Qevix::TAG_QUOTE | Qevix::PRINTABLE);
-addChClass($table, array('.', ',', '!', '?', ':', ';'), Qevix::PUNCTUATION | Qevix::PRINTABLE);
+addChClass($table, [' ', "\t"], Qevix::SPACE);
+addChClass($table, ["\r", "\n"], Qevix::NL);
+addChClass($table, ['"'], Qevix::TAG_QUOTE | Qevix::TEXT_QUOTE | Qevix::PRINTABLE);
+addChClass($table, ["'"], Qevix::TAG_QUOTE | Qevix::PRINTABLE);
+addChClass($table, ['.', ',', '!', '?', ':', ';'], Qevix::PUNCTUATION | Qevix::PRINTABLE);
 
-addChClass($table, array('<', '>', '[', ']', '{', '}', '(', ')'),  Qevix::TEXT_BRACKET | Qevix::PRINTABLE);
+addChClass($table, ['<', '>', '[', ']', '{', '}', '(', ')'],  Qevix::TEXT_BRACKET | Qevix::PRINTABLE);
 
-addChClass($table, array('@', '#', '$'),  Qevix::SPECIAL_CHAR | Qevix::PRINTABLE);
+addChClass($table, ['@', '#', '$'],  Qevix::SPECIAL_CHAR | Qevix::PRINTABLE);
 
 ob_start();
 var_export($table);
