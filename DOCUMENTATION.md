@@ -12,7 +12,7 @@ cfgAllowTags — Задает список разрешенных тегов
 
 **Пример использования**
 ```php
-$qevix->cfgAllowTags(array('b', 'i', 'u', 'a', 'img', 'ul', 'li', 'ol', 'br', 'code'));
+$qevix->cfgAllowTags(['b', 'i', 'u', 'a', 'img', 'ul', 'li', 'ol', 'br', 'code']);
 ```
 
 ### cfgSetTagShort
@@ -26,7 +26,7 @@ cfgSetTagShort — Указывает какие теги считать кор�
 
 **Пример использования**
 ```php
-$qevix->cfgSetTagShort(array('br','img'));
+$qevix->cfgSetTagShort(['br','img']);
 ```
 
 ### cfgSetTagPreformatted
@@ -40,7 +40,7 @@ cfgSetTagPreformatted — Указывает преформатированны�
 
 **Пример использования**
 ```php
-$qevix->cfgSetTagPreformatted(array('code'));
+$qevix->cfgSetTagPreformatted(['code']);
 ```
 
 ### cfgSetTagNoTypography
@@ -54,7 +54,7 @@ cfgSetTagNoTypography — Указывает теги в которых нужн
 
 **Пример использования**
 ```php
-$qevix->cfgSetTagNoTypography(array('code'));
+$qevix->cfgSetTagNoTypography(['code']);
 ```
 
 ### cfgSetTagIsEmpty
@@ -68,7 +68,7 @@ cfgSetTagIsEmpty — Указывает не короткие теги, кото
 
 **Пример использования**
 ```php
-$qevix->cfgSetTagIsEmpty(array('div'));
+$qevix->cfgSetTagIsEmpty(['div']);
 ```
 
 ### cfgSetTagNoAutoBr
@@ -82,7 +82,7 @@ cfgSetTagNoAutoBr — Указывает теги внутри, которых �
 
 **Пример использования**
 ```php
-$qevix->cfgSetTagNoAutoBr(array('ul', 'ol'));
+$qevix->cfgSetTagNoAutoBr(['ul', 'ol']);
 ```
 
 ### cfgSetTagCutWithContent
@@ -96,7 +96,7 @@ cfgSetTagCutWithContent — Указывает теги, которые необ
 
 **Пример использования**
 ```php
-$qevix->cfgSetTagCutWithContent(array('script', 'object', 'iframe', 'style'));
+$qevix->cfgSetTagCutWithContent(['script', 'object', 'iframe', 'style']);
 ```
 
 ### cfgSetTagBlockType
@@ -110,16 +110,16 @@ cfgSetTagBlockType — Указывает теги после, которых н
 
 **Пример использования**
 ```php
-$qevix->cfgSetTagBlockType(array('ol','ul','code'));
+$qevix->cfgSetTagBlockType(['ol','ul','code']);
 ```
 
 ### cfgAllowTagParams
 
 cfgAllowTagParams — Добавляет разрешенные параметры для тегов. Значение по умолчанию - шаблон #text. Разрешенные шаблоны #text, #bool, #int, #link, #regexp(...).
 Шаблон с регулярным выражением может выглядеть так: "#regexp(\d+(%|px))"
-Шаблон #link может быть задан строкой или описан массивом с указанием разрешенных доменов: "array('#link' => ['youtube.com', 'video.com'])"
+Шаблон #link может быть задан строкой или описан массивом с указанием разрешенных доменов: "['#link' => ['youtube.com', 'video.com']]"
 
-`$qevix->cfgAllowTagParams($tag, $params)`
+`$qevix->cfgSetTagAttrAllowed($tag, $params)`
 
 **Параметры**
 * $tag — (string) тег
@@ -127,9 +127,9 @@ cfgAllowTagParams — Добавляет разрешенные параметр
 
 **Пример использования**
 ```php
-$qevix->cfgAllowTagParams('a', array('title', 'href' => '#link', 'rel' => '#text', 'target' => array('_blank'), 'download' => '#bool'));
-$qevix->cfgAllowTagParams('img', array('src' => '#text', 'alt' => '#text', 'title', 'align' => array('right', 'left', 'center'), 'width' => '#int', 'height' => '#int'));
-$qevix->cfgAllowTagParams('video', array('src' => array('#link' => ['youtube.com', 'video.com']));
+$qevix->cfgSetTagAttrAllowed('a', ['title', 'href' => '#link', 'rel' => '#text', 'target' => ['_blank'], 'download' => '#bool']);
+$qevix->cfgSetTagAttrAllowed('img', ['src' => '#text', 'alt' => '#text', 'title', 'align' => ['right', 'left', 'center'], 'width' => '#int', 'height' => '#int']);
+$qevix->cfgSetTagAttrAllowed('video', ['src' => ['#link' => ['youtube.com', 'video.com']]];
 ```
 
 ### cfgSetTagParamsRequired
@@ -295,7 +295,7 @@ cfgSetLinkProtocolAllow — Устанавливает список разреш
 
 **Пример использования**
 ```php
-$qevix->cfgSetLinkProtocolAllow(array('http','https'));
+$qevix->cfgSetLinkProtocolAllow(['http','https']);
 ```
 
 ### cfgSetXHTMLMode

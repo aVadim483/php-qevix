@@ -1,41 +1,46 @@
 <?php
 
-require 'qevix.php';
+namespace avadim\Qevix;
 
-class QevixTests extends \PHPUnit_Framework_TestCase
+use PHPUnit\Framework\TestCase;
+
+class QevixTest extends TestCase
 {
-    private static $qevix = null;
+    /** @var Qevix */
+    private static $qevix;
 
     public static function setUpBeforeClass()
     {
         $qevix = new Qevix();
 
         // 1. Задает список разрешенных тегов
-        $qevix->cfgAllowTags(array('b', 'i', 'u', 'a', 'img', 'ul', 'li', 'ol', 'br', 'code', 'pre', 'div', 'cut', 'video'));
+        $qevix->cfgAllowTags(['b', 'i', 'u', 'a', 'img', 'ul', 'li', 'ol', 'br', 'code', 'pre', 'div', 'cut', 'video']);
 
         // 2. Указавает, какие теги считать короткими (<br>, <img>)
-        $qevix->cfgSetTagShort(array('br','img','cut', 'video'));
+        $qevix->cfgSetTagShort(['br','img','cut', 'video']);
 
         // 3. Указывает преформатированные теги, в которых нужно всё заменять на HTML сущности
-        $qevix->cfgSetTagPreformatted(array('code'));
+        $qevix->cfgSetTagPreformatted(['code']);
 
         // 4. Указывает не короткие теги, которые могут быть пустыми и их не нужно из-за этого удалять
-        $qevix->cfgSetTagIsEmpty(array('div'));
+        $qevix->cfgSetTagIsEmpty(['div']);
 
         // 5. Указывает теги внутри которых не нужна авто расстановка тегов перевода на новую строку
-        $qevix->cfgSetTagNoAutoBr(array('ul', 'ol'));
+        $qevix->cfgSetTagNoAutoBr(['ul', 'ol']);
 
         // 6. Указывает теги, которые необходимо вырезать вместе с содержимым
-        $qevix->cfgSetTagCutWithContent(array('script', 'object', 'iframe', 'style'));
+        $qevix->cfgSetTagCutWithContent(['script', 'object', 'iframe', 'style']);
 
         // 7. Указывает теги, после которых не нужно добавлять дополнительный перевод строки, например, блочные теги
-        $qevix->cfgSetTagBlockType(array('ol','ul','code','video','div'));
+        $qevix->cfgSetTagBlockType(['ol','ul','code','video','div']);
 
         // 8. Добавляет разрешенные параметры для тегов, значение по умолчанию шаблон #text. Разрешенные шаблоны #text, #int, #link, #regexp(...) (Например: "#regexp(\d+(%|px))")
-        $qevix->cfgAllowTagParams('a', array('title', 'href' => '#link', 'rel' => '#text', 'target' => array('_blank')));
-        $qevix->cfgAllowTagParams('img', array('src' => '#text', 'alt' => '#text', 'title', 'align' => array('right', 'left', 'center'), 'width' => '#int', 'height' => '#int'));
-        $qevix->cfgAllowTagParams('video', array('src' => ['#link' => ['youtube.com','vimeo.com']]));
-        $qevix->cfgAllowTagParams('div', array('itemscope' => '#bool', 'itemtype' => '#link', 'class' => '#text'));
+        $qevix->cfgAllowTagParams('a', ['title', 'href' => '#link', 'rel' => '#text', 'target' => ['_blank']]);
+        $qevix->cfgAllowTagParams('img', ['src' => '#text', 'alt' => '#text', 'title', 'align' => ['right', 'left', 'center'], 'width' => '#int', 'height' => '#int']);
+        $qevix->cfgAllowTagParams('video', ['src' => ['#link' => ['youtube.com','vimeo.com']]]);
+        $qevix->cfgAllowTagParams('div', ['itemscope' => '#bool', 'itemtype' => '#link', 'class' => '#text']);
+        // 8a. Тег <head> не разрешен, но задать атрибуты мы можем
+        $qevix->cfgAllowTagParams('head', ['class' => '#text']);
 
         // 9. Добавляет обязательные параметры для тега
         $qevix->cfgSetTagParamsRequired('a', 'href');
@@ -54,10 +59,10 @@ class QevixTests extends \PHPUnit_Framework_TestCase
         $qevix->cfgSetTagParamDefault('img', 'alt', '');
 
         // 13. Указывает теги, в которых нужно отключить типографирование текста
-        $qevix->cfgSetTagNoTypography(array('code', 'pre'));
+        $qevix->cfgSetTagNoTypography(['code', 'pre']);
 
         // 14. Устанавливает список разрешенных протоколов для ссылок (https, http, ftp)
-        $qevix->cfgSetLinkProtocolAllow(array('http','https'));
+        $qevix->cfgSetLinkProtocolAllow(['http','https']);
 
         // 15. Включает или выключает режим XHTML
         $qevix->cfgSetXHTMLMode(false);
@@ -88,33 +93,33 @@ class QevixTests extends \PHPUnit_Framework_TestCase
 
     public static function tagCodeBuild($tag, $params, $content)
     {
-        return '<pre><code>'.$content.'<code><pre>'."\n";
+        return '<pre><code>' . $content . '<code><pre>' . "\n";
     }
 
     public static function tagSharpBuild($string)
     {
-        if (!preg_match('#^[\w\_\-\ ]{1,32}$#isu', $string)) {
+        if (!preg_match('#^[\w\_\-\ ]{1,32}$#u', $string)) {
             return false;
         }
 
-        return '<a href="/search/tag/'.rawurlencode($string).'/">#'.$string.'</a>';
+        return '<a href="/search/tag/' . rawurlencode($string) . '/">#' . $string . '</a>';
     }
 
     public static function tagAtBuild($string)
     {
-        if (!preg_match('#^[\w\_\-]{1,32}$#isu', $string)) {
+        if (!preg_match('#^[\w\_\-]{1,32}$#u', $string)) {
             return false;
         }
 
-        return '<a href="/user/'.$string.'/">@'.$string.'</a>';
+        return '<a href="/user/' . $string . '/">@' . $string . '</a>';
     }
 
     public function textsDataProvider()
     {
-        return array(
+        return [
             [
-                 '<b>текст текст текст</b>',
-                 '<b>текст текст текст</b>'
+                '<b>текст текст текст</b>',
+                '<b>текст текст текст</b>'
             ], [
                 '<b>текст <b>текст</b> текст</b>',
                 '<b>текст <b>текст</b> текст</b>'
@@ -130,6 +135,9 @@ class QevixTests extends \PHPUnit_Framework_TestCase
             ], [
                 'текст <script>текст</script> текст',
                 'текст текст'
+            ], [
+                '<head class="head">тег head</head>',
+                'тег head'
             ], [
                 '<code>текст <script>текст</script> текст</code>',
                 '<pre><code>текст &#60;script&#62;текст&#60;/script&#62; текст<code><pre>'
@@ -224,15 +232,18 @@ class QevixTests extends \PHPUnit_Framework_TestCase
                 '<div itemscope itemtype="http://schema.org/ImageObject" class=""></div>',
                 '<div itemscope itemtype="http://schema.org/ImageObject" class=""></div>'
             ],
-        );
+        ];
     }
 
     /**
      * @dataProvider textsDataProvider
+     * @param $text
+     * @param $expected
      */
     public function testParse($text, $expected)
     {
         $result = static::$qevix->parse($text, $errors);
         $this->assertEquals($result, $expected);
     }
+
 }

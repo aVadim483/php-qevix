@@ -1,8 +1,8 @@
 
 ## Qevix  [![Build Status](https://travis-ci.org/AlexanderGrom/php-qevix.svg?branch=master)](https://travis-ci.org/AlexanderGrom/php-qevix)
 
-**Qevix** — Jevix-подобный автоматический фильтр HTML/XHTML разметки в текстах.
-Применяя наборы правил, контролирует перечень допустимых тегов и атрибутов, предотвращает возможные XSS-атаки.
+**Qevix** — Система типографирования и фильтрации текста с HTML/XHTML разметкой .
+При обработке HTML-текстов, применяя наборы правил, контролирует перечень допустимых тегов и атрибутов, предотвращает возможные XSS-атаки.
 
 Qevix основывается на идеях и исходном коде [PHP версии Jevix](https://github.com/ur001/Jevix/).
 Фильтр полностью переписан, устраняет ряд ошибок и недоработок, а также вводит новые возможности в правила фильтрации.
@@ -17,7 +17,7 @@ Qevix основывается на идеях и исходном коде [PHP
 
 ### Требования
 
-* PHP >= 5.0
+* PHP >= 5.6
 * php-mbstring
 * UTF-8
 
@@ -31,29 +31,29 @@ $qevix = new Qevix();
 // Конфигурация
 
 // 1. Задает список разрешенных тегов
-$qevix->cfgAllowTags(array('b', 'i', 'u', 'a', 'img', 'ul', 'li', 'ol', 'br', 'code', 'pre', 'div', 'cut'));
+$qevix->cfgAllowTags(['b', 'i', 'u', 'a', 'img', 'ul', 'li', 'ol', 'br', 'code', 'pre', 'div', 'cut']);
 
 // 2. Указывает, какие теги считать короткими (<br>, <img>)
-$qevix->cfgSetTagShort(array('br','img','cut'));
+$qevix->cfgSetTagShort(['br','img','cut']);
 
 // 3. Указывает преформатированные теги, в которых нужно всё заменять на HTML сущности
-$qevix->cfgSetTagPreformatted(array('code'));
+$qevix->cfgSetTagPreformatted(['code']);
 
 // 4. Указывает не короткие теги, которые могут быть пустыми и их не нужно из-за этого удалять
-$qevix->cfgSetTagIsEmpty(array('div'));
+$qevix->cfgSetTagIsEmpty(['div']);
 
 // 5. Указывает теги, внутри которых не нужна авто-расстановка тегов перевода на новую строку
-$qevix->cfgSetTagNoAutoBr(array('ul', 'ol'));
+$qevix->cfgSetTagNoAutoBr(['ul', 'ol']);
 
 // 6. Указывает теги, которые необходимо вырезать вместе с содержимым
-$qevix->cfgSetTagCutWithContent(array('script', 'object', 'iframe', 'style'));
+$qevix->cfgSetTagCutWithContent(['script', 'object', 'iframe', 'style']);
 
 // 7. Указывает теги, после которых не нужно добавлять дополнительный перевод строки. Например, блочные теги
-$qevix->cfgSetTagBlockType(array('ol','ul','code'));
+$qevix->cfgSetTagBlockType(['ol','ul','code']);
 
 // 8. Добавляет разрешенные параметры для тегов. Значение по умолчанию - шаблон #text. Разрешенные шаблоны #text, #int, #link, #regexp(...) (Например: "#regexp(\d+(%|px))")
-$qevix->cfgAllowTagParams('a', array('title', 'href' => '#link', 'rel' => '#text', 'target' => array('_blank'), 'download' => '#bool'));
-$qevix->cfgAllowTagParams('img', array('src' => '#text', 'alt' => '#text', 'title', 'align' => array('right', 'left', 'center'), 'width' => '#int', 'height' => '#int'));
+$qevix->cfgSetTagAttrAllowed('a', ['title', 'href' => '#link', 'rel' => '#text', 'target' => ['_blank'], 'download' => '#bool']);
+$qevix->cfgSetTagAttrAllowed('img', ['src' => '#text', 'alt' => '#text', 'title', 'align' => ['right', 'left', 'center'], 'width' => '#int', 'height' => '#int']);
 
 // 9. Добавляет обязательные параметры для тега
 $qevix->cfgSetTagParamsRequired('img', 'src');
@@ -71,10 +71,10 @@ $qevix->cfgSetTagParamDefault('a', 'rel', 'nofollow', true);
 $qevix->cfgSetTagParamDefault('img', 'alt', '');
 
 // 13. Указывает теги, в которых нужно отключить типографирование текста
-$qevix->cfgSetTagNoTypography(array('code', 'pre'));
+$qevix->cfgSetTagNoTypography(['code', 'pre']);
 
 // 14. Устанавливает список разрешенных протоколов для ссылок (https, http, ftp)
-$qevix->cfgSetLinkProtocolAllow(array('http','https'));
+$qevix->cfgSetLinkProtocolAllow(['http','https']);
 
 // 15. Включает или выключает режим XHTML
 $qevix->cfgSetXHTMLMode(false);
@@ -85,7 +85,7 @@ $qevix->cfgSetAutoBrMode(true);
 // 17. Включает или выключает режим автоматического определения ссылок
 $qevix->cfgSetAutoLinkMode(true);
 
-// 18. Задает символ/символы перевода строки. По умполчанию "\n". Разрешено "\n" или "\r\n"
+// 18. Задает символ/символы перевода строки. По умолчанию "\n". Разрешено "\n", "\r\n" или null (задает автоматически для текущей ОС)
 $qevix->cfgSetEOL("\n");
 
 // 19. Устанавливает на тег callback-функцию
