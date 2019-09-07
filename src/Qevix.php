@@ -68,7 +68,7 @@ class Qevix
     protected $isSpecialCharMode = false;
 
     protected $typoMode = true;
-    protected $isPunctuationSpace = true; // убирает пробелы перед и добавляет после знаков пунктуации
+    protected $isPunctuationSpace = false; // убирает пробелы перед и добавляет после знаков пунктуации
     protected $isReplaceDashes = true;  // замена минуса между словами на нормальное тире
     protected $isReplaceQuotes = true;  // замена кавычек
     protected $br = '<br>';
@@ -2103,20 +2103,6 @@ class Qevix
                 $this->skipSpaces();
                 $text .= ' ';
             }
-            // Добавление символов пунктуации
-            else if ($this->curCharClass & self::PUNCTUATION) {
-                $needChange = $this->typoMode && $this->isPunctuationSpace && $lastCharClass !== self::TEXT_DASH
-                    && !($this->prevCharClass & self::TEXT_DIGIT && $this->nextCharClass & self::TEXT_DIGIT);
-                if ($needChange) {
-                    $text = rtrim($text);
-                }
-                $text .= $this->curChar;
-                if ($needChange) {
-                    $text .= ' ';
-                    $this->skipSpaces();
-                }
-                $this->moveNextPos();
-            }
             // Преобразование HTML сущностей
             else if ($this->curChar === '&' && $this->matchHTMLEntity($entity)) {
                 $text .= isset($this->entities[$entity]) ? $this->entities[$entity] : $entity;
@@ -2154,6 +2140,20 @@ class Qevix
             // Вызов callback-функции если строка предварена специальным символом
             else if ($this->curTag !== 'a' && $this->isSpecialCharMode && ($this->curCharClass & self::SPECIAL_CHAR) && $this->matchSpecialChar($spResult)) {
                 $text .= $spResult;
+            }
+            // Добавление символов пунктуации
+            else if ($this->curCharClass & self::PUNCTUATION) {
+                $needChange = $this->typoMode && $this->isPunctuationSpace && $lastCharClass !== self::TEXT_DASH
+                    && !($this->prevCharClass & self::TEXT_DIGIT && $this->nextCharClass & self::TEXT_DIGIT);
+                if ($needChange) {
+                    $text = rtrim($text);
+                }
+                $text .= $this->curChar;
+                if ($needChange) {
+                    $text .= ' ';
+                    $this->skipSpaces();
+                }
+                $this->moveNextPos();
             }
             // Другие печатные символы
             else if ($this->curCharClass & self::PRINTABLE) {
