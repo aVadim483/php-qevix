@@ -11,7 +11,7 @@
 			"name": "Vadim Shemarov aka aVadim"
 		}
 	],
-	"homepage": "https://github.com/aVadim483/php-qevix",
+	"homepage": "https://github.com/aVadim483/qevix",
 	"type": "library",
 	"license": "MIT",
 	"require": {
