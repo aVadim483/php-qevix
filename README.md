@@ -1,5 +1,5 @@
 
-## Qevix  [![Build Status](https://travis-ci.org/aVadim483/qevix.svg?branch=master)](https://travis-ci.org/aVadim483/qevix)
+## Qevix ![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/aVadim483/qevix)[![Build Status](https://travis-ci.org/aVadim483/qevix.svg?branch=master)](https://travis-ci.org/aVadim483/qevix)
 
 **Qevix** — Система типографирования и фильтрации текста с HTML/XHTML разметкой .
 При обработке HTML-текстов, применяя наборы правил, контролирует перечень допустимых тегов и атрибутов, предотвращает возможные XSS-атаки.
