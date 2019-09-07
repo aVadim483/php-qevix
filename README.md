@@ -22,14 +22,33 @@ Qevix основывается на идеях и исходном коде [PHP
 * php-mbstring
 * UTF-8
 
+### Подключение с помощью Composer
+
+|$ composer require avadim/qevix
+
 ### Пример использования
 
 ```php
-require('qevix.php');
+// Создаем экземпляр 
+$qevix = new avadim\Qevix();
 
-$qevix = new Qevix();
+//  читаем файл конфигурации
+$config = include 'path/to/file/config.php';
 
-// Конфигурация
+$qevix->setConfig($config);
+
+// альтернативный вариант
+$config = include 'path/to/file/config.php';
+$qevix = new avadim\Qevix($config);
+
+// еще более короткий вариант
+$qevix = new avadim\Qevix('path/to/file/config.php');
+```
+
+```php
+$qevix = new avadim\Qevix();
+
+// Конфигурация - задаем параметры по отдельности
 
 // 1. Задает список разрешенных тегов
 $qevix->cfgSetTagsAllowed(['b', 'i', 'u', 'a', 'img', 'ul', 'li', 'ol', 'br', 'code', 'pre', 'div', 'cut']);
@@ -222,11 +241,3 @@ echo $result;
 
 * [DOCUMENTATION](DOCUMENTATION.md)
 
-### Поддержка
-
-* **Александр Громов** - пишите в [Issues](https://github.com/AlexanderGrom/php-qevix/issues)
-
-------
-
-Дайте мне знать, если вы нашли проблему в **Qevix** или вас не устраивает его работа.
-Спасибо!

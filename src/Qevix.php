@@ -17,8 +17,8 @@ class Qevix
     const TEXT_QUOTE    = 0x200;
     const TEXT_BRACKET  = 0x400;
     const SPECIAL_CHAR  = 0x800;
-    //const = 0x1000;
-    //const = 0x2000;
+    const TEXT_DASH     = 0x1000;
+    const TEXT_DIGIT    = 0x2000;
     //const = 0x4000;
     //const = 0x8000;
     const NO_PRINT      = 0x10000;
@@ -52,6 +52,9 @@ class Qevix
     protected $nextCharClass = self::NIL;
     protected $nextPos  = -1;
 
+    protected $prevSymbol; // предыдущий печатный исмвол
+    protected $prevSymbolClass = self::NIL;
+
     protected $curTag;
     protected $statesStack = [];
     protected $quotesOpened = 0;
@@ -59,11 +62,15 @@ class Qevix
 
     protected $isXHTMLMode = false; // режим XHTML - короткие теги вида <tag/> и атрибуты тега обязательно со значение attr="attr"
     protected $isAutoBrMode = true; // перевод строки автоматически преобразуется в тег <br>
-    protected $isSaveNL = true; // сам исмвол перевода строки сохраняется, даже если добавляется <br>
-    protected $limitNL = 2; // число переводов строки подряд
+    protected $isSaveNL = true;     // сам исмвол перевода строки сохраняется, даже если добавляется <br>
+    protected $limitNL = 2;         // число переводов строки подряд
     protected $isAutoLinkMode = true;
     protected $isSpecialCharMode = false;
+
     protected $typoMode = true;
+    protected $isPunctuationSpace = true; // убирает пробелы перед и добавляет после знаков пунктуации
+    protected $isReplaceDashes = true;  // замена минуса между словами на нормальное тире
+    protected $isReplaceQuotes = true;  // замена кавычек
     protected $br = '<br>';
     protected $mode = 'html';
 
@@ -136,7 +143,7 @@ class Qevix
         $tags = is_array($tags) ? $tags : [$tags];
 
         foreach($tags as $tag) {
-            if(!$createIfNoExists && !isset($this->tagsRules[$tag])) {
+            if (!$createIfNoExists && !isset($this->tagsRules[$tag])) {
                 $this->tagsRules[$tag][self::TAG_ALLOWED] = false;
             }
 
@@ -276,7 +283,7 @@ class Qevix
         $attrs = is_array($attrs) ? $attrs : [$attrs];
 
         foreach($attrs as $key => $value) {
-            if(is_string($key)) {
+            if (is_string($key)) {
                 $this->tagsRules[$tag][self::TAG_ATTR_ALLOWED][$key] = $value;
             } else {
                 $this->tagsRules[$tag][self::TAG_ATTR_ALLOWED][$value] = '#text';
@@ -333,7 +340,7 @@ class Qevix
     {
         $childs = is_array($childs) ? $childs : [$childs];
 
-        if($isParentOnly) {
+        if ($isParentOnly) {
             $this->tagsRules[$tag][self::TAG_PARENT_ONLY] = true;
         }
 
@@ -341,7 +348,7 @@ class Qevix
             $this->tagsRules[$tag][self::TAG_CHILD][$child] = true;
             $this->tagsRules[$child][self::TAG_PARENT][$tag] = true;
 
-            if($isChildOnly) {
+            if ($isChildOnly) {
                 $this->tagsRules[$child][self::TAG_CHILD_ONLY] = true;
             }
         }
@@ -405,13 +412,13 @@ class Qevix
      */
     public function cfgSetSpecialCharCallback($char, $callback)
     {
-        if(!is_string($char) || mb_strlen($char) !== 1) {
+        if (!is_string($char) || mb_strlen($char) !== 1) {
             throw new \RuntimeException('Параметр $char метода ' . __METHOD__ . ' должен быть строкой из одного символа');
         }
 
         $charClass = $this->getClassByOrd(static::ord($char));
 
-        if(($charClass & self::SPECIAL_CHAR) === self::NIL) {
+        if (($charClass & self::SPECIAL_CHAR) === self::NIL) {
             throw new \RuntimeException('Параметр $char метода ' . __METHOD__ . ' отсутствует в списке разрешенных символов');
         }
 
@@ -497,13 +504,61 @@ class Qevix
     /**
      * КОНФИГУРАЦИЯ: Включает или выключает режим автоматического определения ссылок
      *
-     * @param boolean $isAutoLinkMode
+     * @param boolean $param
      *
      * @return $this
      */
-    public function cfgSetAutoLinkMode($isAutoLinkMode)
+    public function cfgSetAutoLinkMode($param)
     {
-        $this->isAutoLinkMode = (bool)$isAutoLinkMode;
+        $this->isAutoLinkMode = (bool)$param;
+
+        return $this;
+    }
+
+    /**
+     * КОНФИГУРАЦИЯ: Включает или выключает режим контроля пробелов вокруг знаков пунктуации
+     *
+     * @param boolean|string $param
+     *
+     * @return $this
+     */
+    public function cfgSetReplaceDashes($param)
+    {
+        if (is_string($param)) {
+            $this->dash = $param;
+        }
+        $this->isReplaceDashes = (bool)$param;
+
+        return $this;
+    }
+
+    /**
+     * КОНФИГУРАЦИЯ: Включает или выключает режим контроля пробелов вокруг знаков пунктуации
+     *
+     * @param boolean|array $param
+     *
+     * @return $this
+     */
+    public function cfgSetReplaceQuotes($param)
+    {
+        if (is_array($param)) {
+            $this->quotes = $param;
+        }
+        $this->isReplaceQuotes = (bool)$param;
+
+        return $this;
+    }
+
+    /**
+     * КОНФИГУРАЦИЯ: Включает или выключает режим контроля пробелов вокруг знаков пунктуации
+     *
+     * @param boolean $param
+     *
+     * @return $this
+     */
+    public function cfgSetPunctuationSpace($param)
+    {
+        $this->isPunctuationSpace = (bool)$param;
 
         return $this;
     }
@@ -558,7 +613,7 @@ class Qevix
     public function cfgSetMode($mode)
     {
         $mode = strtolower($mode);
-        if (in_array($mode, ['text', 'html', 'xhtml'])) {
+        if (in_array($mode, ['html', 'xhtml', 'text', 'plain'])) {
             $this->mode = $mode;
             if ($mode !== 'xhtml') {
                 $this->cfgSetXHTMLMode(false);
@@ -665,15 +720,22 @@ class Qevix
     }
 
     /**
-     * @param array $config
+     * @param mixed $config
      * @param bool $reset
      *
      * @return $this
      */
-    public function setConfig(array $config, $reset = false)
+    public function setConfig($config, $reset = false)
     {
         if ($reset) {
             $this->cfgReset();
+        }
+        if (is_string($config)) {
+            if (is_file($config)) {
+                $config = include $config;
+            } else {
+                throw new \RuntimeException('Qevix cannot read config file');
+            }
         }
         foreach($config as $section => $data) {
             if ($section === 'forbidden_tags' || $section === 'allowed_tags') {
@@ -792,7 +854,7 @@ class Qevix
                         $this->cfgSetTagGlobal($tag);
                     }
                     // Указывает теги, в которых нужно отключить типографирование текста
-                    if (!empty($params['no_typografy'])) {
+                    if (!empty($params['no_typography'])) {
                         $this->cfgSetTagNoTypography([$tag]);
                     }
                 }
@@ -814,6 +876,24 @@ class Qevix
                     // Устанавливает на тег callback-функцию, которая сохраняет URL изображений для meta-описания
                     foreach($data['event'] as $char => $callback) {
                         $this->cfgSetTagEventCallback($char, $callback);
+                    }
+                }
+            }
+            elseif ($section === 'typography') {
+                if (empty($data)) {
+                    $this->typoMode = false;
+                } else {
+                    // замена минуса между словами на нормальное тире
+                    if (isset($data['replace_dashes'])) {
+                        $this->cfgSetReplaceDashes($data['replace_dashes']);
+                    }
+                    // замена кавычек
+                    if (isset($data['replace_quotes'])) {
+                        $this->cfgSetReplaceQuotes($data['replace_quotes']);
+                    }
+                    // проверка пробелов вокруг знаков пунктуации
+                    if (isset($data['punctuation_space'])) {
+                        $this->cfgSetPunctuationSpace($data['cfgSetPunctuationSpace']);
                     }
                 }
             }
@@ -887,6 +967,11 @@ class Qevix
         $this->prevCharOrd = $prevPosStatus ? static::ord($this->prevChar) : 0;
         $this->prevCharClass = $prevPosStatus ? $this->getClassByOrd($this->prevCharOrd) : self::NIL;
 
+        if ($this->prevCharClass & self::PRINTABLE) {
+            $this->prevSymbol = $this->prevChar;
+            $this->prevSymbolClass = $this->prevCharClass;
+        }
+
         $curPosStatus = ($curPos < $this->textLen && $curPos >= 0);
 
         $this->curPos = $curPos;
@@ -943,6 +1028,11 @@ class Qevix
         $this->prevCharOrd = $state['prevCharOrd'];
         $this->prevCharClass = $state['prevCharClass'];
 
+        if ($this->prevCharClass & self::PRINTABLE) {
+            $this->prevSymbol = $this->prevChar;
+            $this->prevSymbolClass = $this->prevCharClass;
+        }
+
         $this->curPos = $state['curPos'];
         $this->curChar = $state['curChar'];
         $this->curCharOrd = $state['curCharOrd'];
@@ -971,13 +1061,13 @@ class Qevix
     {
         $args_list = func_get_args();
 
-        if(count($args_list) === 0) {
+        if (count($args_list) === 0) {
             return false;
         }
 
         $tagsRules =& $this->tagsRules;
-        foreach($args_list as $value) {
-            if($value === null || !isset($tagsRules[$value])) {
+        foreach ($args_list as $value) {
+            if ($value === null || !isset($tagsRules[$value])) {
                 return false;
             }
 
@@ -1036,8 +1126,7 @@ class Qevix
         $length = mb_strlen($str, 'UTF-8');
         $buffer = '';
 
-        while($length-- && $this->curCharClass)
-        {
+        while($length-- && $this->curCharClass) {
             $buffer .= $this->curChar;
             $this->moveNextPos();
         }
@@ -1075,32 +1164,29 @@ class Qevix
     {
         $chars = $this->strToArray($str);
 
-        while($this->curCharClass) {
-            if($this->curChar === $chars[0]) {
+        while ($this->curCharClass) {
+            if ($this->curChar === $chars[0]) {
                 $this->saveState();
 
                 $state = true;
-                foreach($chars as $char) {
-                    if($this->curCharClass === self::NIL) {
+                foreach ($chars as $char) {
+                    if ($this->curCharClass === self::NIL) {
                         $this->removeState();
                         return false;
                     }
-
-                    if($this->curChar !== $char) {
+                    if ($this->curChar !== $char) {
                         $state = false;
                         break;
                     }
-
                     $this->moveNextPos();
                 }
 
                 $this->restoreState();
 
-                if($state) {
+                if ($state) {
                     return true;
                 }
             }
-
             $this->moveNextPos();
         }
 
@@ -1124,20 +1210,18 @@ class Qevix
 
         $state = true;
         foreach($chars as $char) {
-            if($this->curCharClass === self::NIL) {
+            if ($this->curCharClass === self::NIL) {
                 $state = false;
                 break;
             }
-
-            if($this->curChar !== $char) {
+            if ($this->curChar !== $char) {
                 $state = false;
                 break;
             }
-
             $this->moveNextPos();
         }
 
-        if($state) {
+        if ($state) {
             $this->removeState();
         }
         else {
@@ -1156,7 +1240,11 @@ class Qevix
      */
     protected function getClassByOrd($ord)
     {
-        return isset($this->charClasses[$ord]) ? $this->charClasses[$ord] : self::PRINTABLE;
+        $result = isset($this->charClasses[$ord]) ? $this->charClasses[$ord] : self::PRINTABLE;
+        if ($ord >= 0x30 && $ord <= 0x39) {
+            $result |= self::TEXT_DIGIT;
+        }
+        return $result;
     }
 
     /**
@@ -1167,7 +1255,7 @@ class Qevix
     protected function skipSpaces()
     {
         $count = 0;
-        while($this->curCharClass & self::SPACE) {
+        while ($this->curCharClass & self::SPACE) {
             $this->moveNextPos();
             $count++;
         }
@@ -1184,17 +1272,15 @@ class Qevix
     protected function skipNL($limit=0)
     {
         $count = 0;
-        while($this->curCharClass & self::NL) {
-            if($limit > 0 && $count >= $limit) {
+        while ($this->curCharClass & self::NL) {
+            if ($limit > 0 && $count >= $limit) {
                 break;
             }
-
             $this->moveNextPos();
             $this->skipSpaces();
 
             $count++;
         }
-
         return $count;
     }
 
@@ -1208,11 +1294,10 @@ class Qevix
     protected function skipClass($class)
     {
         $count = 0;
-        while($this->curCharClass & $class) {
+        while ($this->curCharClass & $class) {
             $this->moveNextPos();
             $count++;
         }
-
         return $count;
     }
 
@@ -1226,11 +1311,10 @@ class Qevix
     protected function grabCharClass($class)
     {
         $result = '';
-        while($this->curCharClass & $class) {
+        while ($this->curCharClass & $class) {
             $result .= $this->curChar;
             $this->moveNextPos();
         }
-
         return $result;
     }
 
@@ -1244,11 +1328,10 @@ class Qevix
     protected function grabNotCharClass($class)
     {
         $result = '';
-        while($this->curCharClass && ($this->curCharClass & $class) === self::NIL) {
+        while ($this->curCharClass && ($this->curCharClass & $class) === self::NIL) {
             $result .= $this->curChar;
             $this->moveNextPos();
         }
-
         return $result;
     }
 
@@ -1266,14 +1349,14 @@ class Qevix
         $this->skipSpaces();
         $this->skipNL();
 
-        while($this->curCharClass) {
+        while ($this->curCharClass) {
             $tagName = null;
             $tagParams = [];
             $tagContent = null;
             $shortTag = false;
 
             // Если текущий тег это тег без текста - пропускаем символы до "<"
-            if($this->curChar !== '<' && $this->tagsRules($this->curTag, self::TAG_PARENT_ONLY)) {
+            if ($this->curChar !== '<' && $this->tagsRules($this->curTag, self::TAG_PARENT_ONLY)) {
                 $this->skipTextToChar('<');
             }
 
@@ -1281,26 +1364,26 @@ class Qevix
 
             if ($this->curChar === '<') {
                 // Тег в котором есть текст
-                if($this->matchTag($tagName, $tagParams, $tagContent, $shortTag)) {
+                if ($this->matchTag($tagName, $tagParams, $tagContent, $shortTag)) {
                     $tagBuilt = $this->makeTag($tagName, $tagParams, $tagContent, $shortTag, $parentTag);
                     $content .= $tagBuilt;
 
-                    if($tagBuilt !== '' && ($this->tagsRules($tagName, self::TAG_BLOCK_TYPE) || $tagName === 'br')) {
+                    if ($tagBuilt !== '' && ($this->tagsRules($tagName, self::TAG_BLOCK_TYPE) || $tagName === 'br')) {
                         $this->skipNL(1);
                     }
 
-                    if($tagBuilt === '') {
+                    if ($tagBuilt === '') {
                         $this->skipClass(self::SPACE | self::NL);
                     }
                 }
                 // Комментарий <!-- -->
-                else if($this->matchStr('<!--')) {
+                else if ($this->matchStr('<!--')) {
                     $this->skipTextToStr('-->') && $this->skipStr('-->');
                     $this->skipClass(self::SPACE | self::NL);
                 }
                 // Конец тега
-                else if($this->matchTagClose($tagName)) {
-                    if($this->curTag !== null) {
+                else if ($this->matchTagClose($tagName)) {
+                    if ($this->curTag !== null) {
                         $this->restoreState();
                         return $content;
                     }
@@ -1308,7 +1391,7 @@ class Qevix
                 }
                 // Просто символ "<"
                 else {
-                    if(!$this->tagsRules($this->curTag, self::TAG_PARENT_ONLY)) {
+                    if (!$this->tagsRules($this->curTag, self::TAG_PARENT_ONLY)) {
                         $content .= $this->entities['<'];
                     }
                     $this->moveNextPos();
@@ -1344,31 +1427,31 @@ class Qevix
         $shortTag = false;
         $closeTag = null;
 
-        if(!$this->matchTagOpen($tagName, $tagParams, $shortTag)) {
+        if (!$this->matchTagOpen($tagName, $tagParams, $shortTag)) {
             return false;
         }
 
-        if($shortTag) {
+        if ($shortTag) {
             return true;
         }
 
         $curTag = $this->curTag;
         $typoMode = $this->typoMode;
 
-        if($this->tagsRules($tagName, self::TAG_NO_TYPOGRAPHY)) {
+        if ($this->tagsRules($tagName, self::TAG_NO_TYPOGRAPHY)) {
             $this->typoMode = false;
         }
 
         $this->curTag = $tagName;
 
-        if($this->tagsRules($tagName, self::TAG_PREFORMATTED)) {
+        if ($this->tagsRules($tagName, self::TAG_PREFORMATTED)) {
             $tagContent = $this->makePreformatted($tagName);
         }
         else {
             $tagContent = $this->makeContent($tagName);
         }
 
-        if(($tagName !== $closeTag) && $this->matchTagClose($closeTag)) {
+        if (($tagName !== $closeTag) && $this->matchTagClose($closeTag)) {
             $this->setError('Неверный закрывающий тег ' . $closeTag . '. Ожидалось закрытие ' . $tagName . '');
         }
 
@@ -1389,7 +1472,7 @@ class Qevix
      */
     protected function matchTagOpen(&$tagName, &$tagParams, &$shortTag)
     {
-        if($this->curChar !== '<') {
+        if ($this->curChar !== '<') {
             return false;
         }
 
@@ -1401,31 +1484,31 @@ class Qevix
 
         $this->skipSpaces();
 
-        if($tagName === '') {
+        if ($tagName === '') {
             $this->restoreState();
             return false;
         }
 
         $tagName = mb_strtolower($tagName, 'UTF-8');
 
-        if($this->curChar !== '>' && $this->curChar !== '/') {
+        if ($this->curChar !== '>' && $this->curChar !== '/') {
             $this->matchTagParams($tagParams);
         }
 
         $shortTag = $this->tagsRules($tagName, self::TAG_SHORT);
 
-        if(!$shortTag && $this->curChar === '/') {
+        if (!$shortTag && $this->curChar === '/') {
             $this->restoreState();
             return false;
         }
 
-        if($shortTag && $this->curChar === '/') {
+        if ($shortTag && $this->curChar === '/') {
             $this->moveNextPos();
         }
 
         $this->skipSpaces();
 
-        if($this->curChar !== '>') {
+        if ($this->curChar !== '>') {
             $this->restoreState();
             return false;
         }
@@ -1445,7 +1528,7 @@ class Qevix
      */
     protected function matchTagClose(&$tagName)
     {
-        if($this->curChar !== '<') {
+        if ($this->curChar !== '<') {
             return false;
         }
 
@@ -1453,7 +1536,7 @@ class Qevix
 
         $this->skipSpaces() || $this->moveNextPos();
 
-        if($this->curChar !== '/') {
+        if ($this->curChar !== '/') {
             $this->restoreState();
             return false;
         }
@@ -1464,7 +1547,7 @@ class Qevix
 
         $this->skipSpaces();
 
-        if($tagName === '' || $this->curChar !== '>') {
+        if ($tagName === '' || $this->curChar !== '>') {
             $this->restoreState();
             return false;
         }
@@ -1490,7 +1573,7 @@ class Qevix
         $value = null;
 
         while($this->matchTagParam($name, $value)) {
-            if(mb_strpos($name, '-', 0, 'UTF-8') !== 0) {
+            if (mb_strpos($name, '-', 0, 'UTF-8') !== 0) {
                 $params[$name] = $value;
             }
             $name = $value = '';
@@ -1514,7 +1597,7 @@ class Qevix
 
         $name = $this->grabCharClass(self::TAG_PARAM_NAME);
 
-        if($name === '') {
+        if ($name === '') {
             $this->removeState();
             return false;
         }
@@ -1522,8 +1605,8 @@ class Qevix
         $this->skipSpaces();
 
         // Параметр без значения
-        if($this->curChar !== '=') {
-            if($this->curChar === '>' || $this->curChar === '/' || (($this->curCharClass & self::TAG_PARAM_NAME) && $this->curChar !== '-')) {
+        if ($this->curChar !== '=') {
+            if ($this->curChar === '>' || $this->curChar === '/' || (($this->curCharClass & self::TAG_PARAM_NAME) && $this->curChar !== '-')) {
                 $value = '';
 
                 $this->removeState();
@@ -1536,7 +1619,7 @@ class Qevix
 
         $this->skipSpaces();
 
-        if(!$this->matchTagParamValue($value)) {
+        if (!$this->matchTagParamValue($value)) {
             $this->restoreState();
             return false;
         }
@@ -1556,7 +1639,7 @@ class Qevix
      */
     protected function matchTagParamValue(&$value)
     {
-        if($this->curCharClass & self::TAG_QUOTE) {
+        if ($this->curCharClass & self::TAG_QUOTE) {
             $quote = $this->curChar;
             $escape = false;
 
@@ -1571,7 +1654,7 @@ class Qevix
                 $this->moveNextPos();
             }
 
-            if($this->curChar !== $quote) {
+            if ($this->curChar !== $quote) {
                 return false;
             }
 
@@ -1599,20 +1682,20 @@ class Qevix
         $content = '';
 
         while($this->curCharClass) {
-            if($this->curChar === '<' && $openTag !== null) {
+            if ($this->curChar === '<' && $openTag !== null) {
                 $closeTag = '';
                 $this->saveState();
 
                 $isClosedTag = $this->matchTagClose($closeTag);
 
-                if($isClosedTag) {
+                if ($isClosedTag) {
                     $this->restoreState();
                 }
                 else {
                     $this->removeState();
                 }
 
-                if($isClosedTag && $openTag === $closeTag) {
+                if ($isClosedTag && $openTag === $closeTag) {
                     break;
                 }
             }
@@ -1642,27 +1725,27 @@ class Qevix
         $tagName = mb_strtolower($tagName, 'UTF-8');
 
         // Тег необходимо вырезать вместе с содержимым
-        if($this->tagsRules($tagName, self::TAG_CUT)) {
+        if ($this->tagsRules($tagName, self::TAG_CUT)) {
             return '';
         }
 
         // Допустим ли тег к использованию
-        if(!$this->tagsRules($tagName, self::TAG_ALLOWED)) {
+        if (!$this->tagsRules($tagName, self::TAG_ALLOWED)) {
             return $this->tagsRules($parentTag, self::TAG_PARENT_ONLY) ? '' : $tagContent;
         }
 
         // Должен ли тег НЕ быть дочерним к любому другому тегу
-        if($this->tagsRules($tagName, self::TAG_GLOBAL_ONLY) && $parentTag !== null) {
+        if ($this->tagsRules($tagName, self::TAG_GLOBAL_ONLY) && $parentTag !== null) {
             return $tagContent;
         }
 
         // Может ли тег находиться внутри родительского тега
-        if($this->tagsRules($parentTag, self::TAG_PARENT_ONLY) && !$this->tagsRules($parentTag, self::TAG_CHILD, $tagName)) {
+        if ($this->tagsRules($parentTag, self::TAG_PARENT_ONLY) && !$this->tagsRules($parentTag, self::TAG_CHILD, $tagName)) {
             return '';
         }
 
         // Тег может находиться только внутри другого тега
-        if($this->tagsRules($tagName, self::TAG_CHILD_ONLY) && !$this->tagsRules($tagName, self::TAG_PARENT, $parentTag)) {
+        if ($this->tagsRules($tagName, self::TAG_CHILD_ONLY) && !$this->tagsRules($tagName, self::TAG_PARENT, $parentTag)) {
             return $tagContent;
         }
 
@@ -1675,14 +1758,14 @@ class Qevix
             // Разрешен ли этот атрибут
             $paramAllowedValues = $this->tagsRules($tagName, self::TAG_ATTR_ALLOWED, $param) ? $this->tagsRules[$tagName][self::TAG_ATTR_ALLOWED][$param] : false;
 
-            if($paramAllowedValues === false) {
+            if ($paramAllowedValues === false) {
                 continue;
             }
 
             // Параметр есть в списке и это массив возможных значений
-            if(is_array($paramAllowedValues)) {
-                if(isset($paramAllowedValues['#link']) && is_array($paramAllowedValues['#link'])) {
-                    if(preg_match('#javascript:#iu', $value)) {
+            if (is_array($paramAllowedValues)) {
+                if (isset($paramAllowedValues['#link']) && is_array($paramAllowedValues['#link'])) {
+                    if (preg_match('#javascript:#iu', $value)) {
                         $this->setError('Попытка вставить JavaScript в URI');
                         continue;
                     }
@@ -1695,46 +1778,46 @@ class Qevix
                     foreach($paramAllowedValues['#link'] as $domain) {
                         $domain = preg_quote($domain, '#');
                         // (http:|https:)? или то, или то, или ничего
-                        if(preg_match('#^(' . $protocols . ')?//' . $domain . '(/|$)#iu', $value)) {
+                        if (preg_match('#^(' . $protocols . ')?//' . $domain . '(/|$)#iu', $value)) {
                             $found = true;
                             break;
                         }
                     }
-                    if(!$found) {
+                    if (!$found) {
                         $this->setError('Недопустимое значение "' . $value . '" для атрибута "' . $param . '" тега "' . $tagName . '"');
                         continue;
                     }
                 }
-                else if(!in_array($value, $paramAllowedValues, true)) {
+                else if (!in_array($value, $paramAllowedValues, true)) {
                     $this->setError('Недопустимое значение "'.$value.'" для атрибута "'.$param.'" тега "'.$tagName.'"');
                     continue;
                 }
             }
 
             // Параметр есть в списке и это строка представляющая правило
-            if(is_string($paramAllowedValues)) {
-                if($paramAllowedValues === '#int') {
-                    if(!preg_match('#^\d+$#u', $value)) {
+            if (is_string($paramAllowedValues)) {
+                if ($paramAllowedValues === '#int') {
+                    if (!preg_match('#^\d+$#u', $value)) {
                         $this->setError('Недопустимое значение "' . $value . '" для атрибута "' . $param . '" тега "' . $tagName . '". Ожидалось число');
                         continue;
                     }
                 }
 
-                else if($paramAllowedValues === '#text') {
+                else if ($paramAllowedValues === '#text') {
                     // ничего не делаем
                 }
 
-                else if($paramAllowedValues === '#bool') {
+                else if ($paramAllowedValues === '#bool') {
                     $value = null;
                 }
 
-                else if($paramAllowedValues === '#link') {
-                    if(preg_match('#javascript:#iu', $value)) {
+                else if ($paramAllowedValues === '#link') {
+                    if (preg_match('#javascript:#iu', $value)) {
                         $this->setError('Попытка вставить JavaScript в URI');
                         continue;
                     }
 
-                    if(!preg_match('#^[a-z0-9\/\#]#iu', $value)) {
+                    if (!preg_match('#^[a-z0-9/\#]#iu', $value)) {
                         $this->setError('Первый символ URL должен быть буквой, цифрой, символами слеша или решетки');
                         continue;
                     }
@@ -1744,14 +1827,14 @@ class Qevix
                     }, $this->linkProtocolAllowed));
 
                     // (http:|https:)? или то, или то, или ничего
-                    if(!preg_match('#^(' . $protocols . ')?\/\/#iu', $value) && !preg_match('#^(\/|\#)#u', $value) && !preg_match('#^mailto:#iu', $value)) {
+                    if (!preg_match('#^(' . $protocols . ')?//#iu', $value) && !preg_match('#^([/#])#u', $value) && !preg_match('#^mailto:#iu', $value)) {
                         $value = $this->linkProtocolDefault . '://' . $value;
                     }
                 }
 
-                else if(strpos($paramAllowedValues, '#regexp') === 0) {
-                    if(preg_match('#^\#regexp\((.*?)\)$#iu', $paramAllowedValues, $match)) {
-                        if(!preg_match('#^'.$match[1].'$#iu', $value)) {
+                else if (strpos($paramAllowedValues, '#regexp') === 0) {
+                    if (preg_match('#^\#regexp\((.*?)\)$#iu', $paramAllowedValues, $match)) {
+                        if (!preg_match('#^'.$match[1].'$#iu', $value)) {
                             $this->setError('Недопустимое значение "' . $value . '" для атрибута "' . $param . '" тега "' . $tagName . '". Ожидалась строка подходящая под регулярное выражение "' . $match[1] . '"');
                             continue;
                         }
@@ -1761,7 +1844,7 @@ class Qevix
                     }
                 }
 
-                else if($paramAllowedValues !== $value) {
+                else if ($paramAllowedValues !== $value) {
                     $this->setError('Недопустимое значение "' . $value . '" для атрибута "' . $param . '" тега "' . $tagName . '". Ожидалось "' . $paramAllowedValues.'"');
                     continue;
                 }
@@ -1774,71 +1857,76 @@ class Qevix
         $requiredParams = $this->tagsRules($tagName, self::TAG_ATTR_REQUIRED) ? array_keys($this->tagsRules[$tagName][self::TAG_ATTR_REQUIRED]) : [];
 
         foreach($requiredParams as $requiredParam) {
-            if(!isset($tagParamsResult[$requiredParam])) {
+            if (!isset($tagParamsResult[$requiredParam])) {
                 return $tagContent;
             }
         }
 
         // Авто добавляемые параметры
-        if($this->tagsRules($tagName, self::TAG_PARAM_AUTO_ADD)) {
+        if ($this->tagsRules($tagName, self::TAG_PARAM_AUTO_ADD)) {
             foreach($this->tagsRules[$tagName][self::TAG_PARAM_AUTO_ADD] as $param => $value) {
-                if(!isset($tagParamsResult[$param]) || $value['rewrite']) {
+                if (!isset($tagParamsResult[$param]) || $value['rewrite']) {
                     $tagParamsResult[$param] = $value['value'];
                 }
             }
         }
 
         // Удаляем пустые не короткие теги если не сказано другого
-        if(!$this->tagsRules($tagName, self::TAG_EMPTY)) {
-            if(!$shortTag && $tagContent === '') {
+        if (!$this->tagsRules($tagName, self::TAG_EMPTY)) {
+            if (!$shortTag && $tagContent === '') {
                 return '';
             }
         }
 
         // Вызываем callback функцию event... перед сборкой тега
-        if($this->tagsRules($tagName, self::TAG_EVENT_CALLBACK)) {
+        if ($this->tagsRules($tagName, self::TAG_EVENT_CALLBACK)) {
             call_user_func($this->tagsRules[$tagName][self::TAG_EVENT_CALLBACK], $tagName, $tagParamsResult, $tagContent);
         }
 
         // Вызываем callback функцию, если тег собирается именно так
-        if($this->tagsRules($tagName, self::TAG_BUILD_CALLBACK)) {
+        if ($this->tagsRules($tagName, self::TAG_BUILD_CALLBACK)) {
             return call_user_func($this->tagsRules[$tagName][self::TAG_BUILD_CALLBACK], $tagName, $tagParamsResult, $tagContent);
         }
 
         // Собираем тег
-        $text .= '<'.$tagName;
+        $tag = (($this->mode === 'html') ? '<' : '&lt;') . $tagName;
 
         foreach($tagParamsResult as $param => $value) {
             if ($value === null) {
                 if ($this->isXHTMLMode) {
-                    $text .= ' ' . $param . '="' . $param . '"';
+                    $tag .= ' ' . $param . '="' . $param . '"';
                 } else {
-                    $text .= ' ' . $param;
+                    $tag .= ' ' . $param;
                 }
             } else {
-                $text .= ' ' . $param . '="' . $value . '"';
+                $tag .= ' ' . $param . '="' . $value . '"';
             }
         }
 
-        $text .= ($shortTag && $this->isXHTMLMode) ? '/>' : '>';
+        if ($shortTag && $this->isXHTMLMode) {
+            $tag .= '/';
+        }
+        $tag .= ($this->mode === 'html') ? '>' : '&gt';
 
-        if($this->tagsRules($tagName, self::TAG_PARENT_ONLY)) {
+        $text .= $tag;
+
+        if ($this->tagsRules($tagName, self::TAG_PARENT_ONLY)) {
             $text .= "\n";
         }
 
-        if(!$shortTag) {
+        if (!$shortTag) {
             $text .= $tagContent.'</'.$tagName.'>';
         }
 
-        if($this->tagsRules($parentTag, self::TAG_PARENT_ONLY)) {
+        if ($this->tagsRules($parentTag, self::TAG_PARENT_ONLY)) {
             $text .= "\n";
         }
 
-        if($this->tagsRules($tagName, self::TAG_BLOCK_TYPE)) {
+        if ($this->tagsRules($tagName, self::TAG_BLOCK_TYPE)) {
             $text .= "\n";
         }
 
-        if($tagName === 'br') {
+        if ($tagName === 'br') {
             $text .= "\n";
         }
 
@@ -1854,11 +1942,11 @@ class Qevix
      */
     protected function matchDash(&$dash = '')
     {
-        if($this->curChar !== '-') {
+        if ($this->curChar !== '-') {
             return false;
         }
 
-        if(($this->prevCharClass & (self::SPACE | self::NL | self::TEXT_BRACKET)) === self::NIL && $this->prevCharClass !== self::NIL) {
+        if (($this->prevCharClass & (self::SPACE | self::NL | self::TEXT_BRACKET)) === self::NIL && $this->prevCharClass !== self::NIL) {
             return false;
         }
 
@@ -1868,7 +1956,7 @@ class Qevix
             $this->moveNextPos();
         }
 
-        if(($this->nextCharClass & (self::SPACE | self::NL | self::TEXT_BRACKET)) === self::NIL && $this->nextCharClass !== self::NIL) {
+        if (($this->nextCharClass & (self::SPACE | self::NL | self::TEXT_BRACKET)) === self::NIL && $this->nextCharClass !== self::NIL) {
             $this->restoreState();
             return false;
         }
@@ -1889,19 +1977,19 @@ class Qevix
      */
     protected function matchHTMLEntity(&$entity = '')
     {
-        if($this->curChar !== '&') {
+        if ($this->curChar !== '&') {
             return '';
         }
 
         $this->saveState();
         $this->moveNextPos();
 
-        if($this->curChar === '#') {
+        if ($this->curChar === '#') {
             $this->moveNextPos();
 
             $entityCode = $this->grabCharClass(self::NUMERIC);
 
-            if($entityCode === '' || $this->curChar !== ';') {
+            if ($entityCode === '' || $this->curChar !== ';') {
                 $this->restoreState();
                 return false;
             }
@@ -1915,7 +2003,7 @@ class Qevix
 
         $entityName = $this->grabCharClass(self::ALPHA | self::NUMERIC);
 
-        if($entityName === '' || $this->curChar !== ';') {
+        if ($entityName === '' || $this->curChar !== ';') {
             $this->restoreState();
             return false;
         }
@@ -1937,21 +2025,29 @@ class Qevix
      */
     protected function matchQuote(&$quote = '')
     {
-        if(($this->curCharClass & self::TEXT_QUOTE) === self::NIL) {
+        if (($this->curCharClass & self::TEXT_QUOTE) === self::NIL) {
             return false;
         }
 
-        $type = ($this->quotesOpened >= 2) ||
-        ($this->quotesOpened > 0 &&
-            ((($this->prevCharClass & (self::SPACE | self::NL | self::TEXT_BRACKET)) === self::NIL && $this->prevCharClass != self::NIL) ||
-                (($this->nextCharClass & (self::SPACE | self::NL | self::TEXT_BRACKET | self::PUNCTUATION)) || $this->nextCharClass === self::NIL))) ? 'close' : 'open';
+        $prevCharFlag = (($this->prevCharClass & (self::SPACE | self::NL | self::TEXT_BRACKET)) === self::NIL && $this->prevCharClass !== self::NIL);
+        $nextCharFlag = (($this->nextCharClass & (self::SPACE | self::NL | self::TEXT_BRACKET | self::PUNCTUATION)) || $this->nextCharClass === self::NIL);
 
+        if ($this->quotesOpened && ($this->quotesOpened >= 2 || $prevCharFlag || $nextCharFlag)) {
+            $type = 'close';
+        } else {
+            $type = 'open';
+        }
 
-        if($type === 'open' && ($this->prevCharClass & (self::SPACE | self::NL | self::TEXT_BRACKET)) === self::NIL && $this->prevCharClass !== self::NIL) {
+        if ($type === 'open'
+            && ($this->prevCharClass & (self::SPACE | self::NL | self::TEXT_BRACKET)) === self::NIL
+            && $this->prevCharClass !== self::NIL) {
             return false;
         }
 
-        if($type === 'close' && ($this->nextCharClass & (self::SPACE | self::NL | self::TEXT_BRACKET | self::PUNCTUATION)) === self::NIL && $this->nextCharClass !== self::NIL) {
+        if ($type === 'close'
+            && ($this->nextCharClass & (self::SPACE | self::NL | self::TEXT_BRACKET | self::PUNCTUATION)) === self::NIL
+            && ($this->nextCharClass & self::TEXT_QUOTE) === self::NIL
+            && $this->nextCharClass !== self::NIL) {
             return false;
         }
 
@@ -1988,6 +2084,7 @@ class Qevix
     protected function makeText()
     {
         $text = '';
+        $lastCharClass = self::NIL;
 
         while($this->curChar !== '<' && $this->curCharClass) {
             $spResult = null;
@@ -1996,35 +2093,49 @@ class Qevix
             $dash = null;
             $url = null;
 
-            // Преобразование HTML сущностей
-            if($this->curChar === '&' && $this->matchHTMLEntity($entity)) {
-                $text .= isset($this->entities[$entity]) ? $this->entities[$entity] : $entity;
+            if ($lastCharClass === self::TEXT_DASH && !($this->curCharClass & self::SPACE) && !($this->curCharClass & self::PUNCTUATION)) {
+                // это для того, чтобы не убирать пробелы после тире
+                $lastCharClass = $this->curCharClass;
+            }
+
+            // Преобразование пробельных символов
+            if ($this->curCharClass & self::SPACE) {
+                $this->skipSpaces();
+                $text .= ' ';
             }
             // Добавление символов пунктуации
-            else if($this->curCharClass & self::PUNCTUATION) {
+            else if ($this->curCharClass & self::PUNCTUATION) {
+                $needChange = $this->typoMode && $this->isPunctuationSpace && $lastCharClass !== self::TEXT_DASH
+                    && !($this->prevCharClass & self::TEXT_DIGIT && $this->nextCharClass & self::TEXT_DIGIT);
+                if ($needChange) {
+                    $text = rtrim($text);
+                }
                 $text .= $this->curChar;
+                if ($needChange) {
+                    $text .= ' ';
+                    $this->skipSpaces();
+                }
                 $this->moveNextPos();
             }
+            // Преобразование HTML сущностей
+            else if ($this->curChar === '&' && $this->matchHTMLEntity($entity)) {
+                $text .= isset($this->entities[$entity]) ? $this->entities[$entity] : $entity;
+            }
             // Преобразование символов тире в длинное тире
-            else if($this->typoMode && $this->curChar === '-' && $this->matchDash($dash)) {
+            else if ($this->typoMode && $this->isReplaceDashes && $this->curChar === '-' && $this->matchDash($dash)) {
                 $text .= $dash;
+                $lastCharClass = self::TEXT_DASH;
             }
             // Преобразование кавычек
-            else if($this->typoMode && ($this->curCharClass & self::TEXT_QUOTE) && $this->matchQuote($quote)) {
+            else if ($this->typoMode && $this->isReplaceQuotes && ($this->curCharClass & self::TEXT_QUOTE) && $this->matchQuote($quote)) {
                 $text .= $quote;
-            }
-            // Преобразование пробельных символов
-            else if($this->curCharClass & self::SPACE) {
-                $this->skipSpaces();
-
-                $text .= ' ';
             }
             // Перевод строки
             else if ($this->curCharClass & self::NL) {
                 $nlCount = $this->skipNL();
                 $nl = $this->isSaveNL ? "\n" : '';
                 // Преобразование символов перевода строк в тег <br>
-                if($this->isAutoBrMode && !$this->tagsRules($this->curTag, self::TAG_NO_AUTO_BR)) {
+                if ($this->isAutoBrMode && !$this->tagsRules($this->curTag, self::TAG_NO_AUTO_BR)) {
                     $nl = $this->br . $nl;
                 }
                 if ($this->limitNL > 0 && $nlCount > $this->limitNL) {
@@ -2037,15 +2148,15 @@ class Qevix
                 }
             }
             // Преобразование текста похожего на ссылку в кликабельную ссылку
-            else if($this->isAutoLinkMode && ($this->curCharClass & self::ALPHA) && $this->curTag !== 'a' && $url = $this->matchURL($addr)) {
+            else if ($this->curTag !== 'a' && $this->isAutoLinkMode && ($this->curCharClass & self::ALPHA) && $url = $this->matchURL($addr)) {
                 $text .= $this->makeTag('a' , ['href' => $url], $addr, false);
             }
             // Вызов callback-функции если строка предварена специальным символом
-            else if($this->isSpecialCharMode && ($this->curCharClass & self::SPECIAL_CHAR) && $this->curTag !== 'a' && $this->matchSpecialChar($spResult)) {
+            else if ($this->curTag !== 'a' && $this->isSpecialCharMode && ($this->curCharClass & self::SPECIAL_CHAR) && $this->matchSpecialChar($spResult)) {
                 $text .= $spResult;
             }
             // Другие печатные символы
-            else if($this->curCharClass & self::PRINTABLE) {
+            else if ($this->curCharClass & self::PRINTABLE) {
                 $text .= isset($this->entities[$this->curChar]) ? $this->entities[$this->curChar] : $this->curChar;
                 $this->moveNextPos();
             }
@@ -2174,22 +2285,22 @@ class Qevix
     protected function matchURL(&$addr = '')
     {
         $url = '';
-        if(($this->prevCharClass & (self::SPACE | self::NL | self::TEXT_QUOTE | self::TEXT_BRACKET)) === self::NIL && $this->prevCharClass !== self::NIL) {
+        if (($this->prevCharClass & (self::SPACE | self::NL | self::TEXT_QUOTE | self::TEXT_BRACKET)) === self::NIL && $this->prevCharClass !== self::NIL) {
             return false;
         }
 
         $this->saveState();
 
-        if($this->matchStr('http://') && in_array('http', $this->linkProtocolAllowed, true)) {
+        if (in_array('http', $this->linkProtocolAllowed, true) && $this->matchStr('http://')) {
             //
         }
-        else if($this->matchStr('https://') && in_array('https', $this->linkProtocolAllowed, true)) {
+        else if (in_array('https', $this->linkProtocolAllowed, true) && $this->matchStr('https://')) {
             //
         }
-        else if($this->matchStr('ftp://') && in_array('ftp', $this->linkProtocolAllowed, true)) {
+        else if (in_array('ftp', $this->linkProtocolAllowed, true) && $this->matchStr('ftp://')) {
             //
         }
-        else if($this->matchStr('www.')) {
+        else if ($this->matchStr('www.')) {
             $url = $this->linkProtocolDefault . '://';
         } else {
             $this->restoreState();
@@ -2203,29 +2314,29 @@ class Qevix
 
         $buffer = '';
         while($this->curCharClass & self::PRINTABLE) {
-            if($this->curChar === '<') {
+            if ($this->curChar === '<') {
                 break;
             }
-            if($this->curCharClass & self::TEXT_QUOTE) {
+            if ($this->curCharClass & self::TEXT_QUOTE) {
                 break;
             }
-            if(($this->curCharClass & self::TEXT_BRACKET) && $openedBracket > 0) {
-                if($this->curChar === $closeBracket && $openedBracket === 1) {
+            if (($this->curCharClass & self::TEXT_BRACKET) && $openedBracket > 0) {
+                if ($this->curChar === $closeBracket && $openedBracket === 1) {
                     break;
                 }
 
-                if($this->curChar === $openBracket) {
+                if ($this->curChar === $openBracket) {
                     ++$openedBracket;
                 }
-                if($this->curChar === $closeBracket) {
+                if ($this->curChar === $closeBracket) {
                     --$openedBracket;
                 }
             }
-            else if($this->curCharClass & self::PUNCTUATION) {
+            else if ($this->curCharClass & self::PUNCTUATION) {
                 $this->saveState();
                 $punctuation = $this->grabCharClass(self::PUNCTUATION);
 
-                if(($this->curCharClass & self::PRINTABLE) === self::NIL) {
+                if (($this->curCharClass & self::PRINTABLE) === self::NIL) {
                     $this->restoreState();
                     break;
                 }
@@ -2233,7 +2344,7 @@ class Qevix
                 $this->removeState();
                 $buffer .= $punctuation;
 
-                if($this->curCharClass & (self::TEXT_QUOTE | self::TEXT_BRACKET)) {
+                if ($this->curCharClass & (self::TEXT_QUOTE | self::TEXT_BRACKET)) {
                     break;
                 }
             }
@@ -2242,7 +2353,7 @@ class Qevix
             $this->moveNextPos();
         }
 
-        if($buffer === '') {
+        if ($buffer === '') {
             $this->restoreState();
             return false;
         }
@@ -2263,15 +2374,15 @@ class Qevix
      */
     protected function matchSpecialChar(&$spResult = '')
     {
-        if(($this->curCharClass & self::SPECIAL_CHAR) === self::NIL) {
+        if (($this->curCharClass & self::SPECIAL_CHAR) === self::NIL) {
             return false;
         }
 
-        if(!isset($this->specialChars[$this->curChar])) {
+        if (!isset($this->specialChars[$this->curChar])) {
             return false;
         }
 
-        if($this->prevCharClass && ($this->prevCharClass & (self::SPACE | self::NL | self::TEXT_BRACKET)) === self::NIL) {
+        if ($this->prevCharClass && ($this->prevCharClass & (self::SPACE | self::NL | self::TEXT_BRACKET)) === self::NIL) {
             return false;
         }
 
@@ -2281,14 +2392,14 @@ class Qevix
         $this->saveState();
         $this->moveNextPos();
 
-        if(($this->curCharClass & self::TEXT_BRACKET) && isset($this->bracketsSPC[$this->curChar])) {
+        if (($this->curCharClass & self::TEXT_BRACKET) && isset($this->bracketsSPC[$this->curChar])) {
             $closeBracket = $this->bracketsSPC[$this->curChar];
             $escape = false;
 
             $this->moveNextPos();
 
             while($this->curCharClass && ($this->curCharClass & self::NL) === self::NIL && ($this->curChar !== $closeBracket || $escape === true)) {
-                if(($this->curCharClass & self::SPACE) && ($this->prevCharClass & self::SPACE)) {
+                if (($this->curCharClass & self::SPACE) && ($this->prevCharClass & self::SPACE)) {
                     $this->skipSpaces();
                     continue;
                 }
@@ -2301,7 +2412,7 @@ class Qevix
                 $this->moveNextPos();
             }
 
-            if($this->curChar !== $closeBracket) {
+            if ($this->curChar !== $closeBracket) {
                 $this->restoreState();
                 return false;
             }
@@ -2310,13 +2421,12 @@ class Qevix
         }
         else {
             while($this->curCharClass && ($this->curCharClass & (self::SPACE | self::NL | self::TEXT_BRACKET)) === self::NIL) {
-                if($this->curCharClass & self::PUNCTUATION) {
+                if ($this->curCharClass & self::PUNCTUATION) {
                     $this->saveState();
 
                     $punctuation = $this->grabCharClass(self::PUNCTUATION);
 
-                    if($this->curCharClass & (self::SPACE | self::NL | self::TEXT_BRACKET) || $this->curCharClass == self::NIL)
-                    {
+                    if ($this->curCharClass & (self::SPACE | self::NL | self::TEXT_BRACKET) || $this->curCharClass === self::NIL) {
                         $this->restoreState();
                         break;
                     }
@@ -2331,14 +2441,14 @@ class Qevix
 
         $buffer = trim($buffer);
 
-        if($buffer === '') {
+        if ($buffer === '') {
             $this->restoreState();
             return false;
         }
 
         $spResult = call_user_func($this->specialChars[$spChar], $buffer);
 
-        if(!$spResult) {
+        if (!$spResult) {
             $this->restoreState();
             return false;
         }
@@ -2359,19 +2469,19 @@ class Qevix
     {
         $ord = ord($chr[0]);
 
-        if($ord < 0x80) {
+        if ($ord < 0x80) {
             return $ord;
         }
-        if($ord < 0xC2) {
+        if ($ord < 0xC2) {
             return false;
         }
-        if($ord < 0xE0) {
+        if ($ord < 0xE0) {
             return ($ord & 0x1F) << 6 | (ord($chr[1]) & 0x3F);
         }
-        if($ord < 0xF0) {
+        if ($ord < 0xF0) {
             return ($ord & 0x0F) << 12 | (ord($chr[1]) & 0x3F) << 6 | (ord($chr[2]) & 0x3F);
         }
-        if($ord < 0xF5) {
+        if ($ord < 0xF5) {
             return ($ord & 0x0F) << 18 | (ord($chr[1]) & 0x3F) << 12 | (ord($chr[2]) & 0x3F) << 6 | (ord($chr[3]) & 0x3F);
         }
 
@@ -2387,16 +2497,16 @@ class Qevix
      */
     public static function chr($ord)
     {
-        if($ord < 0x80) {
+        if ($ord < 0x80) {
             return chr($ord);
         }
-        if($ord < 0x800) {
+        if ($ord < 0x800) {
             return chr(0xC0 | $ord >> 6) . chr(0x80 | $ord & 0x3F);
         }
-        if($ord < 0x10000) {
+        if ($ord < 0x10000) {
             return chr(0xE0 | $ord >> 12) . chr(0x80 | $ord >> 6 & 0x3F) . chr(0x80 | $ord & 0x3F);
         }
-        if($ord < 0x110000) {
+        if ($ord < 0x110000) {
             return chr(0xF0 | $ord >> 18) . chr(0x80 | $ord >> 12 & 0x3F) . chr(0x80 | $ord >> 6 & 0x3F) . chr(0x80 | $ord & 0x3F);
         }
 
@@ -2421,7 +2531,7 @@ class Qevix
      *
      * @return array
      */
-    public function getError()
+    public function getErrors()
     {
         return $this->errorsList;
     }
@@ -2429,14 +2539,32 @@ class Qevix
     /**
      * Запускает парсер
      *
-     * @param string $text текст
-     * @param array $maxLen максимальная длина текста
-     * @param array $errors сообщения об ошибках
+     * @param string $text Текст
+     * @param array $maxLen Максимальная длина текста
+     * @param string $mode Режим обработки
+     * @param array $errors Сообщения об ошибках
      *
      * @return string
      */
-    protected function _parse($text, $maxLen, &$errors = [])
+    protected function _parse($text, $maxLen, $mode, &$errors = [])
     {
+        $saveMode = $this->mode;
+        $saveTagRules = $this->tagsRules;
+        $saveAutoBrMode = $this->isAutoBrMode;
+        switch ($mode) {
+            case 'html':
+            case 'text':
+                $this->mode = $mode;
+                break;
+            case 'plain':
+                $this->mode = 'plain';
+                $this->tagsRules = [];
+                $this->isAutoBrMode = false;
+                break;
+            default:
+                //
+        }
+
         $this->prevPos = -1;
         $this->prevChar = null;
         $this->prevCharOrd = 0;
@@ -2481,6 +2609,10 @@ class Qevix
 
         $errors = $this->errorsList;
 
+        $this->tagsRules = $saveTagRules;
+        $this->isAutoBrMode = $saveAutoBrMode;
+        $this->mode = $saveMode;
+
         return $content;
     }
 
@@ -2494,7 +2626,7 @@ class Qevix
      */
     public function parse($text, &$errors = [])
     {
-        return $this->_parse($text, [0, 0], $errors);
+        return $this->_parse($text, [0, 0], 'html', $errors);
     }
 
     /**
@@ -2504,16 +2636,42 @@ class Qevix
      *
      * @param string $text
      * @param int|array $maxLen - либо число, лимитирующее размер выходного текста, либо массив - минимальное и максимальное значение
-     * @param array $errors
+     * @param string $mode
      *
      * @return string
      */
-    public function cut($text, $maxLen, &$errors = [])
+    public function cut($text, $maxLen, $mode = null)
     {
         if (!is_array($maxLen)) {
             $maxLen = [$maxLen, $maxLen];
         }
-        return $this->_parse($text, $maxLen, $errors);
+        return $this->_parse($text, $maxLen, $mode, $errors);
+    }
+
+    /**
+     * Обрабатывает текст, как HTML-код по заданным правилам
+     *
+     * @param string $text
+     * @param array $errors
+     *
+     * @return string
+     */
+    public function html($text, &$errors = [])
+    {
+        return $this->_parse($text, [0, 0], 'html', $errors);
+    }
+
+    /**
+     * Обрабатывает текст, как HTML-код по заданным правилам, но '<' и '>' в тегах заменяются на сущности '&lt;' и '&gt;'
+     *
+     * @param string $text
+     * @param array $errors
+     *
+     * @return string
+     */
+    public function text($text, &$errors = [])
+    {
+        return $this->_parse($text, [0, 0], 'text', $errors);
     }
 
     /**
@@ -2526,12 +2684,7 @@ class Qevix
      */
     public function plain($text, &$errors = [])
     {
-        $tagRules = $this->tagsRules;
-        $this->tagsRules = [];
-        $text = $this->parse($text, $errors);
-        $this->tagsRules = $tagRules;
-
-        return $text;
+        return $this->_parse($text, [0, 0], 'plain', $errors);
     }
 
 }
