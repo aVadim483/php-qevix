@@ -1827,7 +1827,7 @@ class Qevix
                     }, $this->linkProtocolAllowed));
 
                     // (http:|https:)? или то, или то, или ничего
-                    if (!preg_match('#^(' . $protocols . ')?//#iu', $value) && !preg_match('#^([/#])#u', $value) && !preg_match('#^mailto:#iu', $value)) {
+                    if (!preg_match('#^(' . $protocols . ')?//#iu', $value) && !preg_match('#^([\#])#u', $value) && !preg_match('#^mailto:#iu', $value)) {
                         $value = $this->linkProtocolDefault . '://' . $value;
                     }
                 }

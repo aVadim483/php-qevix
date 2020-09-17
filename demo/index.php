@@ -1,5 +1,5 @@
 <?php
-use \avadim\Qevix\Qevix;
+use avadim\Qevix\Qevix;
 
 include '../src/Qevix.php';
 
@@ -17,18 +17,29 @@ $sDefaultText = <<<EOD
 <a href="#">А это текст ссылки</a>
 EOD;
 
-if (isset($_POST['demo_text'])) {
-    $sDemoText = $_POST['demo_text'];
-} else {
-    $sDemoText = $sDefaultText;
-}
-if (isset($_POST['mode'])) {
-    $sDemoMode = $_POST['mode'];
-} else {
-    $sDemoMode = 'text';
+$typo = $replace = true;
+$sDemoText = $sDefaultText;
+$sDemoMode = 'text';
+
+if (!empty($_POST)) {
+    if (isset($_POST['demo_text'])) {
+        $sDemoText = $_POST['demo_text'];
+    }
+    if (isset($_POST['mode'])) {
+        $sDemoMode = $_POST['mode'];
+    }
+
+    $typo = !empty($_POST['typo']);
+    $replace= !empty($_POST['replace']);
 }
 
 $aConfig = include __DIR__ . '/config.html.php';
+if (!$typo) {
+    $aConfig['typography'] = false;
+}
+if (!$replace) {
+    $aConfig['auto_replace'] = false;
+}
 $oQevix = new Qevix($aConfig);
 switch ($sDemoMode) {
     case 'html':
@@ -78,6 +89,13 @@ switch ($sDemoMode) {
         <td>
             <form action="" method="post">
                 <textarea name="demo_text"><?=htmlspecialchars($sDemoText);?></textarea>
+                <label>
+                    <input type="checkbox" name="typo" <?=($typo ? 'checked' : '') ?>>Включить типографику
+                </label>
+                <label>
+                    <input type="checkbox" name="replace" <?=($replace ? 'checked' : '') ?>>Включить автозамену
+                </label>
+
                 <button type="submit" name="mode" value="html">Обработать</button>
                 <button type="submit" name="mode" value="text">Режим 'text'</button>
                 <button type="submit" name="mode" value="plain">Режим 'plain'</button>
